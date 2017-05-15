@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="net.anders.autounlock">
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/bekey_logo"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.NoTitleBar">
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".CoreService"
+            android:enabled="true" />
+        <service
+            android:name=".AccelerometerService"
+            android:enabled="true" />
+        <service
+            android:name=".LocationService"
+            android:enabled="true" />
+        <service
+            android:name=".WifiService"
+            android:enabled="true" />
+        <service
+            android:name=".BluetoothService"
+            android:enabled="true" />
+        <service
+            android:name=".GeofenceService"
+            android:enabled="true" />
+        <service
+            android:name=".ScannerService"
+            android:enabled="true" />
+        <service
+            android:name=".NotificationUtility$NotificationActionService"
+            android:enabled="true"/>
+        <service
+            android:name=".MachineLearning.PatternRecognitionService"
+            android:enabled="true" />
+
+    </application>
+
+</manifest>

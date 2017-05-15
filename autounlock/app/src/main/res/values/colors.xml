@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3F51B5</color>
+    <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorAccent">#FF4081</color>
+    <color name="trainBackground">#F1F1F1</color>
+    <color name="trainBackgroundShadow">#EBEBEB</color>
+    <color name="trainSuccess">#A4C639</color>
+    <color name="trainFailure">#FF033E</color>
+    <color name="trainOn">#3B7A57</color>
+    <color name="trainInfo">#FFBF00</color>
+    <color name="trainWarning">#FF7E00</color>
+    <color name="beKeyBlue">#04A4CC</color>
+</resources>
