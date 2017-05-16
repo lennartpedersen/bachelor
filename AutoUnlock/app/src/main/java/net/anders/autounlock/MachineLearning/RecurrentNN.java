@@ -13,17 +13,28 @@ import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
-public class RecurrentNN {
+import java.util.Map;
 
-    public static void main(String[] args) {
-        createAndUseNetwork();
+import static net.anders.autounlock.MachineLearning.DatabaseRetriever.getTupleDict;
+
+public class RecurrentNN {
+    private final static int NUM_SAMPLES = 49;
+    private final static int N_INPUT = 2;
+    private final static int N_OUTPUT = 1;
+
+    private static MultiLayerNetwork myNetwork;
+
+    public static void main(String[] args) throws Exception {
+        constructNetwork();
+        getProbability();
     }
 
-    private static void createAndUseNetwork() {
+    private static void constructNetwork() throws Exception {
         DenseLayer inputLayer = new DenseLayer.Builder()
-                .nIn(2)
+                .nIn(N_INPUT)
                 .nOut(3)
                 .name("Input")
                 .build();
@@ -37,7 +48,7 @@ public class RecurrentNN {
         RnnOutputLayer outputLayer = new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
                 .activation(Activation.SOFTMAX)
                 .nIn(2)
-                .nOut(1)
+                .nOut(N_OUTPUT)
                 .name("Output")
                 .build();
 
@@ -56,39 +67,54 @@ public class RecurrentNN {
                 .tBPTTForwardLength(100)
                 .tBPTTBackwardLength(100);
 
-        MultiLayerNetwork myNetwork = new MultiLayerNetwork(listBuilder.build());
+        myNetwork = new MultiLayerNetwork(listBuilder.build());
         myNetwork.init();
 
+        trainNetwork();
+    }
 
-        final int NUM_SAMPLES = 4;
+    private static void trainNetwork() throws Exception {
+        Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
 
-        INDArray trainingInputs = Nd4j.zeros(NUM_SAMPLES, inputLayer.getNIn());
-        INDArray trainingOutputs = Nd4j.zeros(NUM_SAMPLES, outputLayer.getNOut());
+        for (int i = 0; i < trainData.keySet().size(); i++) {
+            System.out.println("Fitting " + (i + 1) + " of " + trainData.keySet().size());
+            //System.out.println("Orientation = " + array[0][i] + ", velocity = " + array[1][i]);
 
-        // If 0,0 show 0
-        trainingInputs.putScalar(new int[]{0,0}, 0);
-        trainingInputs.putScalar(new int[]{0,1}, 0);
-        trainingOutputs.putScalar(new int[]{0,0}, 0);
+            Double[][] array = trainData.get(i);
+            INDArray trainingInputs = Nd4j.zeros(N_INPUT, array[0].length);
+            INDArray trainingOutputs = Nd4j.zeros(N_OUTPUT, array[0].length);
 
-        // If 0,1 show 1
-        trainingInputs.putScalar(new int[]{1,0}, 0);
-        trainingInputs.putScalar(new int[]{1,1}, 1);
-        trainingOutputs.putScalar(new int[]{1,0}, 1);
+            for (int j = 0; j < array[0].length; j++) {
+                trainingInputs.putScalar(new int[]{0,j}, array[0][j]); //Orientation
+                trainingInputs.putScalar(new int[]{1,j}, array[1][j]); //Velocity
+            }
 
-        // If 1,0 show 1
-        trainingInputs.putScalar(new int[]{2,0}, 1);
-        trainingInputs.putScalar(new int[]{2,1}, 0);
-        trainingOutputs.putScalar(new int[]{2,0}, 1);
+            DataSet myData = new DataSet(trainingInputs, trainingOutputs);
 
-        // If 1,1 show 0
-        trainingInputs.putScalar(new int[]{3,0}, 1);
-        trainingInputs.putScalar(new int[]{3,1}, 1);
-        trainingOutputs.putScalar(new int[]{3,0}, 0);
+            myNetwork.fit(myData);
+        }
+    }
 
-        DataSet myData = new DataSet(trainingInputs, trainingOutputs);
+    /**
+     * Gets probability of the last timestep, which would be the whether or not to unlock
+     *
+     * See: https://deeplearning4j.org/usingrnns
+     */
+    private static void getProbability() throws Exception {
+        Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
+        Double[][] array = trainData.get(5);
 
-        myNetwork.fit(myData);
+        INDArray newShit = Nd4j.zeros(N_INPUT, array[0].length);
 
-        System.out.println(myNetwork.output(trainingInputs));
+        for (int i = 0; i < array[0].length; i++) {
+            newShit.putScalar(new int[]{0,i}, array[0][i]); //Orientation
+            newShit.putScalar(new int[]{1,i}, array[1][i]); //Velocity
+        }
+
+        INDArray arr = myNetwork.output(newShit);
+        System.out.println(arr);
+        int length = arr.size(2);
+        INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length-1));
+        System.out.println(probs);
     }
 }
