@@ -57,8 +57,6 @@ public class DatabaseRetriever {
                 e.printStackTrace();
             }
         }
-
-        System.out.println();
     }
 
     private static Double[][] convertToTupleArray(ArrayList<Double> orientation, ArrayList<Double> velocity) {
@@ -84,6 +82,39 @@ public class DatabaseRetriever {
             readOldData();
         }
         return tupleDict;
+    }
+
+    public static Double[][] readTestData() throws Exception {
+        InputStream is = new FileInputStream(new File("C:\\Users\\TSN\\Documents\\Gits\\bachelor\\databases\\AutoUnlock-3-test-sucks.csv"));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        reader.readLine(); // To get rid of attribute titles
+
+        ArrayList<Double> velocity = new ArrayList<>();
+        ArrayList<Double> orientation = new ArrayList<>();
+
+        try {
+            String line;
+            String lastUnlockID = "1";
+            while((line=reader.readLine()) != null) {
+                String[] RowData = line.split(",");
+                String newUnlockID = RowData[K_UNLOCK];
+
+                if (lastUnlockID.equals(newUnlockID)) {
+                    orientation.add(Double.parseDouble(RowData[K_ORIENTATION]));
+                    velocity.add(Double.parseDouble(RowData[K_VELOCITY]));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                is.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return convertToTupleArray(orientation, velocity);
     }
 
 }

@@ -72,7 +72,7 @@ public class RecurrentNN {
 
         GravesLSTM inputLayer = new GravesLSTM.Builder()
                 .activation(Activation.TANH).
-                nIn(N_INPUT)
+                nIn(NUM_SAMPLES)
                 .nOut(10)
                 .build();
 
@@ -128,24 +128,22 @@ public class RecurrentNN {
     private static void trainNetwork() throws Exception {
         Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
 
-        for (int i = 1; i < trainData.keySet().size(); i++) {
+        for (int i = 0; i < trainData.keySet().size(); i++) {
             System.out.println("Fitting " + (i + 1) + " of " + trainData.keySet().size());
             //System.out.println("Orientation = " + array[0][i] + ", velocity = " + array[1][i]);
 
             Double[][] trainArray = trainData.get(i);
-            Double[][] testArray  = trainData.get(i-1);
-            INDArray trainingInputs = Nd4j.zeros(trainArray[0].length, NUM_SAMPLES);
-            INDArray trainingOutputs = Nd4j.zeros(trainArray[0].length, 2);
+
+            INDArray trainingInputs = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
+            INDArray trainingOutputs = Nd4j.zeros(1, 1);
 
             for (int j = 0; j < trainArray[0].length; j++) {
-                trainingInputs.putScalar(new int[]{j,0}, trainArray[0][j]); //Orientation
-                trainingInputs.putScalar(new int[]{j,1}, trainArray[1][j]); //Velocity
+                trainingInputs.putScalar(new int[]{0,j}, trainArray[0][j]); //Orientation
+                trainingInputs.putScalar(new int[]{1,j}, trainArray[1][j]); //Velocity
             }
 
-            for (int j = 0; j < testArray[0].length; j++) {
-                trainingOutputs.putScalar(new int[]{j,0}, testArray[0][i]);
-                trainingOutputs.putScalar(new int[]{j,1}, testArray[1][i]);
-            }
+            trainingOutputs.putScalar(new int[]{0,0}, 1);
+
 
             System.out.println("Shape = [" + trainingInputs.shape()[0] + "," + trainingInputs.shape()[1] + "]");
 
@@ -162,13 +160,19 @@ public class RecurrentNN {
      */
     private static void getProbability() throws Exception {
         Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
-        Double[][] array = trainData.get(5);
+        //Double[][] array = trainData.get(2);
 
-        INDArray newShit = Nd4j.zeros( array[0].length, N_INPUT);
+        Double[][] array = DatabaseRetriever.readTestData();
+        if (array == null) {
+            System.out.println("TestData is null");
+            return;
+        }
+
+        INDArray newShit = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
 
         for (int i = 0; i < array[0].length; i++) {
-            newShit.putScalar(new int[]{i,0}, array[0][i]); //Orientation
-            newShit.putScalar(new int[]{i,1}, array[1][i]); //Velocity
+            newShit.putScalar(new int[]{0,i}, array[0][i]); //Orientation
+            newShit.putScalar(new int[]{1,i}, array[1][i]); //Velocity
         }
 
         INDArray arr = myNetwork.output(newShit);
