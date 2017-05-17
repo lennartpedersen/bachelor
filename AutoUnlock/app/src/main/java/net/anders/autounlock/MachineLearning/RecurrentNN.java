@@ -145,7 +145,7 @@ public class RecurrentNN {
             trainingOutputs.putScalar(new int[]{0,0}, 1);
 
 
-            System.out.println("Shape = [" + trainingInputs.shape()[0] + "," + trainingInputs.shape()[1] + "]");
+            //System.out.println("Shape = [" + trainingInputs.shape()[0] + "," + trainingInputs.shape()[1] + "]");
 
             DataSet myData = new DataSet(trainingInputs, trainingOutputs);
 
