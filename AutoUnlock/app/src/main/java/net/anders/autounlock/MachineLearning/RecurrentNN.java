@@ -50,7 +50,7 @@ import static net.anders.autounlock.MachineLearning.DatabaseRetriever.getTupleDi
 import static org.reflections.Reflections.log;
 
 public class RecurrentNN {
-    private final static int NUM_SAMPLES = 49;
+    private final static int NUM_SAMPLES = 50;
     private final static int N_INPUT = 2;
     private final static int N_OUTPUT = 1;
 
@@ -133,6 +133,7 @@ public class RecurrentNN {
             //System.out.println("Orientation = " + array[0][i] + ", velocity = " + array[1][i]);
 
             Double[][] trainArray = trainData.get(i);
+            //System.out.println("Size: " + trainArray.length + ", " + trainArray[0].length);
 
             INDArray trainingInputs = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
             INDArray trainingOutputs = Nd4j.zeros(1, 1);
@@ -160,25 +161,34 @@ public class RecurrentNN {
      */
     private static void getProbability() throws Exception {
         Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
-        //Double[][] array = trainData.get(2);
 
-        Double[][] array = DatabaseRetriever.readTestData();
-        if (array == null) {
-            System.out.println("TestData is null");
-            return;
+        for (Double[][] array : trainData.values()) {
+            //Double[][] array = trainData.get(7);
+
+            //Double[][] array = DatabaseRetriever.readTestData();
+            if (array == null) {
+                System.out.println("TestData is null");
+                return;
+            }
+
+            INDArray newShit = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
+
+            for (int i = 0; i < array[0].length; i++) {
+                newShit.putScalar(new int[]{0, i}, array[0][i]); //Orientation
+                newShit.putScalar(new int[]{1, i}, array[1][i]); //Velocity
+            }
+
+            INDArray arr = myNetwork.output(newShit);
+            //System.out.println(arr);
+            int length = arr.size(2);
+            INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length - 1));
+            double prob = probs.getDouble(0);
+
+            if (prob > 0.6) {
+                System.out.println("Unlock! Probability was " + prob);
+            } else {
+                System.out.println("Didn't unlock. Probability was " + prob);
+            }
         }
-
-        INDArray newShit = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
-
-        for (int i = 0; i < array[0].length; i++) {
-            newShit.putScalar(new int[]{0,i}, array[0][i]); //Orientation
-            newShit.putScalar(new int[]{1,i}, array[1][i]); //Velocity
-        }
-
-        INDArray arr = myNetwork.output(newShit);
-        System.out.println(arr);
-        int length = arr.size(2);
-        INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length-1));
-        System.out.println("Probability at last timestep: " + probs);
     }
 }

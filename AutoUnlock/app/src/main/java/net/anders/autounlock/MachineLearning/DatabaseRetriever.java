@@ -21,7 +21,7 @@ public class DatabaseRetriever {
     private static Map<Integer, Double[][]> tupleDict = new HashMap<>();
 
     private static void readOldData() throws Exception {
-        InputStream is = new FileInputStream(new File("C:\\Users\\TSN\\Documents\\Gits\\bachelor\\databases\\AutoUnlock-3.csv"));
+        InputStream is = new FileInputStream(new File("C:\\Users\\TSN\\Documents\\Gits\\bachelor\\databases\\data1.csv"));
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         reader.readLine(); // To get rid of attribute titles
 
