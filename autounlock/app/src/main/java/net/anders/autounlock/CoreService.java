@@ -22,14 +22,18 @@ import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationServices;
 
 import net.anders.autounlock.Export.Export;
+import net.anders.autounlock.MachineLearning.DatabaseRetriever;
 import net.anders.autounlock.MachineLearning.PatternRecognitionService;
+import net.anders.autounlock.MachineLearning.RecurrentNN;
 import net.anders.autounlock.MachineLearning.UnlockData;
 import net.anders.autounlock.MachineLearning.WindowProcess;
 import net.anders.autounlock.MachineLearning.TrainingProcess;
 import net.anders.autounlock.MachineLearning.WindowData;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import be.ac.ulg.montefiore.run.jahmm.Hmm;
 import be.ac.ulg.montefiore.run.jahmm.ObservationVector;
@@ -86,6 +90,9 @@ public class CoreService extends Service implements
 
     // List of vector observations computed from orientation and velocity
     public static List<Hmm<ObservationVector>> HMM = new ArrayList<>();
+
+    // For ours what up
+    public static Map<Integer, Double[][]> RNN = new HashMap<>();
 
     // Binder given to clients
     private final IBinder localBinder = new LocalBinder();
@@ -186,7 +193,15 @@ public class CoreService extends Service implements
         // Train the models as the first thing, before application can be used
         if (!dataStore.getUnlocks().isEmpty()) {
             MainActivity.lockView.setText("Updating intelligence \n please be patient");
-            trainModel();
+            //trainModel();
+
+            // Get old correct unlocks from DB.
+            try {
+                DatabaseRetriever.readOldData();
+                RecurrentNN.startTraining();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         Log.v("CoreService", "Service created");

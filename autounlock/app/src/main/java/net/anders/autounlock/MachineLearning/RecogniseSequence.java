@@ -21,7 +21,7 @@ public class RecogniseSequence {
 
     private static String TAG = "RecogniseSequence";
 
-    public List<ObservationVector> sequence = new ArrayList<>();
+    public Double[][] sequence;
     public double probability = 0;
     public double bestMatchProb = 0.00000000000000000000000001;
     public int bestMatchNo = -1;
@@ -39,7 +39,7 @@ public class RecogniseSequence {
             System.out.println("Unable to recognise sequence");
         }
         else {
-            System.out.println("Best match is HMM: " + bestMatchNo +  " with probability " + bestMatchProb);
+            System.out.println("Best match is RNN: " + bestMatchNo +  " with probability " + bestMatchProb);
 
             // Send a notification to the user that the lock was successfully unlocked
             NotificationUtility notification = new NotificationUtility();
@@ -53,19 +53,22 @@ public class RecogniseSequence {
     }
 
     public void createSequenceData(WindowData[] snapshot){
-        for (WindowData window : snapshot) {
-            sequence.add(new ObservationVector(new double[]{window.getOrientation(), window.getVelocity()}));
+        sequence = new Double[snapshot.length][];
+
+        for (int i = 0; i < snapshot.length; i++) {
+            WindowData window = snapshot[i];
+            sequence[i] = new Double[]{window.getOrientation(), window.getVelocity()};
         }
     }
 
-    public void evaluateSequence(List<ObservationVector> sequence){
-        for (int i = 0; CoreService.HMM.size() > i; i++) {
+    public void evaluateSequence(Double[][] sequence){
+        for (int i = 0; CoreService.RNN.keySet().size() > i; i++) {
             currentMatchNo = i;
 
             // Compute probability of HMM and the concurrent sequential data
-            probability = getProbability(sequence, CoreService.HMM.get(i), probability);
+            getProbability(sequence);
 
-            System.out.println("HMM: " + i + ": " + probability);
+            System.out.println("RNN: " + i + ": " + probability);
 
             // Check if the probability is greater than the currently highest recorded
             if (probability !=0 && probability > bestMatchProb) {
@@ -76,14 +79,17 @@ public class RecogniseSequence {
     }
 
     // Evaluation problem - Forward-Backward Calculator
-    public double getProbability(List<ObservationVector> sequence, Hmm<ObservationVector> HMM, double probability){
+    public void getProbability(Double[][] sequence){
 
-        ForwardBackwardCalculator fbc = new ForwardBackwardCalculator(sequence, HMM);
+        //ForwardBackwardCalculator fbc = new ForwardBackwardCalculator(sequence, HMM);
 
         // Compute the probability with the Forward-Backward Calculator
-        probability = fbc.probability();
-
-        return probability;
+        //probability = fbc.probability();
+        try {
+            probability = RecurrentNN.getProbability(sequence);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
 
