@@ -4,6 +4,8 @@ package net.anders.autounlock.MachineLearning;
  * Created by tom-fire on 16/05/2017.
  */
 
+import net.anders.autounlock.CoreService;
+
 import org.apache.commons.math3.util.MultidimensionalCounter;
 import org.datavec.api.records.reader.SequenceRecordReader;
 import org.datavec.api.records.reader.impl.collection.CollectionSequenceRecordReader;
@@ -56,9 +58,8 @@ public class RecurrentNN {
 
     private static MultiLayerNetwork myNetwork;
 
-    public static void main(String[] args) throws Exception {
+    public static void startTraining() throws Exception {
         constructNetwork();
-        getProbability();
     }
 
     private static void constructNetwork() throws Exception {
@@ -126,7 +127,7 @@ public class RecurrentNN {
     }
 
     private static void trainNetwork() throws Exception {
-        Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
+        Map<Integer, Double[][]> trainData = CoreService.RNN;
 
         for (int i = 0; i < trainData.keySet().size(); i++) {
             System.out.println("Fitting " + (i + 1) + " of " + trainData.keySet().size());
@@ -159,36 +160,32 @@ public class RecurrentNN {
      *
      * See: https://deeplearning4j.org/usingrnns
      */
-    private static void getProbability() throws Exception {
-        Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
+    public static double getProbability(Double[][] sequence) throws Exception {
+        //Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
 
-        for (Double[][] array : trainData.values()) {
-            //Double[][] array = trainData.get(7);
 
-            //Double[][] array = DatabaseRetriever.readTestData();
-            if (array == null) {
-                System.out.println("TestData is null");
-                return;
-            }
+        //Double[][] array = trainData.get(7);
 
-            INDArray newShit = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
-
-            for (int i = 0; i < array[0].length; i++) {
-                newShit.putScalar(new int[]{0, i}, array[0][i]); //Orientation
-                newShit.putScalar(new int[]{1, i}, array[1][i]); //Velocity
-            }
-
-            INDArray arr = myNetwork.output(newShit);
-            //System.out.println(arr);
-            int length = arr.size(2);
-            INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length - 1));
-            double prob = probs.getDouble(0);
-
-            if (prob > 0.6) {
-                System.out.println("Unlock! Probability was " + prob);
-            } else {
-                System.out.println("Didn't unlock. Probability was " + prob);
-            }
+        //Double[][] array = DatabaseRetriever.readTestData();
+        if (sequence == null) {
+            System.out.println("TestData is null");
+            return 0;
         }
+
+        INDArray newShit = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
+
+        for (int i = 0; i < sequence[0].length; i++) {
+            newShit.putScalar(new int[]{0, i}, sequence[0][i]); //Orientation
+            newShit.putScalar(new int[]{1, i}, sequence[1][i]); //Velocity
+        }
+
+        INDArray arr = myNetwork.output(newShit);
+        //System.out.println(arr);
+        int length = arr.size(2);
+        INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length - 1));
+        double prob = probs.getDouble(0);
+
+
+        return  prob;
     }
 }

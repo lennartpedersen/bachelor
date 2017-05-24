@@ -1,5 +1,7 @@
 package net.anders.autounlock.MachineLearning;
 
+import net.anders.autounlock.CoreService;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,7 +22,7 @@ public class DatabaseRetriever {
 
     private static Map<Integer, Double[][]> tupleDict = new HashMap<>();
 
-    private static void readOldData() throws Exception {
+    public static void readOldData() throws Exception {
         InputStream is = new FileInputStream(new File("C:\\Users\\TSN\\Documents\\Gits\\bachelor\\databases\\data1.csv"));
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         reader.readLine(); // To get rid of attribute titles
@@ -41,7 +43,10 @@ public class DatabaseRetriever {
                 } else {
                     Double[][] tuples = convertToTupleArray(orientation, velocity);
                     int index = Integer.parseInt(lastUnlockID);
-                    tupleDict.put(index-1, tuples);
+
+
+                    CoreService.RNN.put(index-1, tuples);
+                    //tupleDict.put(index-1, tuples);
 
                     lastUnlockID = newUnlockID;
                     velocity = new ArrayList<>();
@@ -77,7 +82,7 @@ public class DatabaseRetriever {
         return array;
     }
 
-    public static Map<Integer, Double[][]> getTupleDict() throws Exception {
+    private static Map<Integer, Double[][]> getTupleDict() throws Exception {
         if (tupleDict.isEmpty()) {
             readOldData();
         }
