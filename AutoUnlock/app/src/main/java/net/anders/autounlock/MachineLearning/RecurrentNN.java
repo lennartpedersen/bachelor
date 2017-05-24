@@ -100,7 +100,7 @@ public class RecurrentNN {
         myNetwork.init();
     }
 
-    private static void trainNetwork() throws Exception {
+    public static void trainNetwork() throws Exception {
         Map<Integer, Double[][]> trainData = CoreService.RNN;
 
         for (int i = 0; i < trainData.keySet().size(); i++) {

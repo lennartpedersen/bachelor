@@ -652,8 +652,14 @@ public class CoreService extends Service implements
 
     // Initiate training of the HMM
     public void trainModel(){
-        if (!dataStore.getUnlocks().isEmpty()) {
+        /*if (!dataStore.getUnlocks().isEmpty()) {
             new TrainingProcess(dataStore.getUnlocks());
+        }*/
+        try {
+            DatabaseRetriever.readOldData();
+            RecurrentNN.trainNetwork();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

@@ -1,6 +1,7 @@
 package net.anders.autounlock.MachineLearning;
 
 import android.content.Context;
+import android.widget.Toast;
 
 import net.anders.autounlock.CoreService;
 import net.anders.autounlock.NotificationUtility;
