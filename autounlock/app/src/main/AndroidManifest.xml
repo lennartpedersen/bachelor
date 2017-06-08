@@ -39,9 +39,6 @@
             android:name=".LocationService"
             android:enabled="true" />
         <service
-            android:name=".WifiService"
-            android:enabled="true" />
-        <service
             android:name=".BluetoothService"
             android:enabled="true" />
         <service

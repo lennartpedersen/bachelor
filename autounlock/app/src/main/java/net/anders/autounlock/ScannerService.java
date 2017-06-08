@@ -53,20 +53,18 @@ public class ScannerService extends Service {
                     }
                 }
                 if (!foundLocks.isEmpty() && !CoreService.recordedLocation.isEmpty()) {
-                    for (String foundLock : foundLocks) {
-                        decisionLocks.add(foundLock);
+
+                    if (!CoreService.isPatternRecognitionRunning &&
+                            !CoreService.isTraining &&
+                            !CoreService.RNN.isEmpty() &&
+                            CoreService.trainingComplete)
+                    {
+                        //if (CoreService.environmentApproved(foundLocks.get(0).toString())) {
+                            Intent startDecision = new Intent("START_PATTERNRECOGNITION");
+                            sendBroadcast(startDecision);
+                        //}
                     }
-                    if (!decisionLocks.isEmpty()) {
-                        if (!CoreService.isPatternRecognitionRunning &&
-                                !CoreService.isTraining &&
-                                !CoreService.HMM.isEmpty() &&
-                                CoreService.trainingComplete) {
-                            if (CoreService.environmentApproved(decisionLocks.get(0).toString())) {
-                                Intent startDecision = new Intent("START_PATTERNRECOGNITION");
-                                sendBroadcast(startDecision);
-                            }
-                        }
-                    }
+
                 }
                 try {
                     Thread.sleep(300);

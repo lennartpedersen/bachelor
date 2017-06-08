@@ -24,14 +24,14 @@ public class DatabaseRetriever {
     private static Map<Integer, Double[][]> tupleDict = new HashMap<>();
 
     public static void readOldData() throws Exception {
-        //InputStream is = new FileInputStream(new File("C:\\Users\\TSN\\Documents\\Gits\\bachelor\\databases\\data1.csv"));
-        //BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        //reader.readLine(); // To get rid of attribute titles
+        InputStream is = new FileInputStream(new File("C:\\Users\\Lennart Pedersen\\Dropbox\\Bachelor\\databases\\AutoUnlock-13.csv"));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        reader.readLine(); // To get rid of attribute titles
 
         ArrayList<Double> velocity = new ArrayList<>();
         ArrayList<Double> orientation = new ArrayList<>();
 
-
+        /*
         for (UnlockData u : CoreService.getUnlocks())
         {
             int unlockID = u.getId();
@@ -51,8 +51,8 @@ public class DatabaseRetriever {
 
 
 
-        }
-        /*
+        }*/
+
         try {
             String line;
             String lastUnlockID = "1";
@@ -65,15 +65,18 @@ public class DatabaseRetriever {
                     velocity.add(Double.parseDouble(RowData[K_VELOCITY]));
                 } else {
                     Double[][] tuples = convertToTupleArray(orientation, velocity);
+
                     int index = Integer.parseInt(lastUnlockID);
 
 
-                    CoreService.RNN.put(index-1, tuples);
-                    //tupleDict.put(index-1, tuples);
-
+                    //CoreService.RNN.put(index-1, tuples);
+                    tupleDict.put(index-1, tuples);
                     lastUnlockID = newUnlockID;
+
                     velocity = new ArrayList<>();
                     orientation = new ArrayList<>();
+                    orientation.add(Double.parseDouble(RowData[K_ORIENTATION]));
+                    velocity.add(Double.parseDouble(RowData[K_VELOCITY]));
                 }
             }
         } catch (Exception e) {
@@ -84,7 +87,7 @@ public class DatabaseRetriever {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }*/
+        }
     }
 
     private static Double[][] convertToTupleArray(ArrayList<Double> orientation, ArrayList<Double> velocity) {
@@ -105,7 +108,7 @@ public class DatabaseRetriever {
         return array;
     }
 
-    private static Map<Integer, Double[][]> getTupleDict() throws Exception {
+    public static Map<Integer, Double[][]> getTupleDict() throws Exception {
         if (tupleDict.isEmpty()) {
             readOldData();
         }
@@ -113,16 +116,16 @@ public class DatabaseRetriever {
     }
 
     public static Double[][] readTestData() throws Exception {
-        InputStream is = new FileInputStream(new File("C:\\Users\\TSN\\Documents\\Gits\\bachelor\\databases\\AutoUnlock-3-test-sucks.csv"));
+        InputStream is = new FileInputStream(new File("C:\\Users\\Lennart Pedersen\\Dropbox\\Bachelor\\databases\\AutoUnlock-13-test.csv"));
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        reader.readLine(); // To get rid of attribute titles
+        //reader.readLine(); // To get rid of attribute titles
 
         ArrayList<Double> velocity = new ArrayList<>();
         ArrayList<Double> orientation = new ArrayList<>();
 
         try {
             String line;
-            String lastUnlockID = "1";
+            String lastUnlockID = "15";
             while((line=reader.readLine()) != null) {
                 String[] RowData = line.split(",");
                 String newUnlockID = RowData[K_UNLOCK];

@@ -5,7 +5,7 @@ package net.anders.autounlock.MachineLearning;
  */
 
 public class WindowData {
-
+    int id;
     double accelerationX;
     double accelerationY;
     double speedX;
@@ -15,9 +15,8 @@ public class WindowData {
     double accelerationMag;
     double time;
 
-    public WindowData(double accelerationX, double accelerationY, double speedX, double speedY, double orientation, double velocity, double accelerationMag, double time) {
-        this.accelerationX = accelerationX;
-        this.accelerationY = accelerationY;
+    public WindowData(int id, double speedX, double speedY, double orientation, double velocity, double accelerationMag, double time) {
+        this.id = id;
         this.speedX = speedX;
         this.speedY = speedY;
         this.orientation = orientation;
@@ -26,18 +25,12 @@ public class WindowData {
         this.time = time;
     }
 
-    public double getAccelerationX() {
-        return accelerationX;
-    }
-    public void setAccelerationX(double accelerationX) {
-        this.accelerationX = accelerationX;
+    public int getId() {
+        return id;
     }
 
-    public double getAccelerationY() {
-        return accelerationY;
-    }
-    public void setAccelerationY(double accelerationY) {
-        this.accelerationY = accelerationY;
+    public void setId(int id) {
+        this.id = id;
     }
 
     public double getSpeedX() {

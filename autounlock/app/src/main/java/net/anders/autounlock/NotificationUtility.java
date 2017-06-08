@@ -2,6 +2,7 @@ package net.anders.autounlock;
 
 import android.app.IntentService;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -46,13 +47,15 @@ public class NotificationUtility {
                         .setAutoCancel(true)
                         .setContentTitle(String.valueOf(BluetoothService.ANDERS_BEKEY) + " was unlocked")
                         .setContentText("Was this decision correct?")
-                        .addAction(new NotificationCompat.Action(R.drawable.ic_check_black,
-                                "Yes", pendingYesIntent))
-                        .addAction(new NotificationCompat.Action(R.drawable.ic_close_black,
-                                "No", pendingNoIntent))
+                        .setContentIntent(pendingYesIntent)
+                        .addAction(R.drawable.ic_check_black,
+                                "Yes", pendingYesIntent)
+                        .addAction(R.drawable.ic_close_black,
+                                "No", pendingNoIntent)
+                        .setPriority(Notification.PRIORITY_MAX)
                         .setVibrate(new long[] {0, 100});
 
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         Notification notification = notificationBuilder.build();
         notification.flags = Notification.FLAG_AUTO_CANCEL;
         notificationManager.notify(NOTIFICATION_ID, notification);
@@ -68,10 +71,10 @@ public class NotificationUtility {
             String action = intent.getAction();
             Log.d("Notification", "Received notification action: " + action);
             if (ACTION_YES.equals(action)) {
-                CoreService.newTruePositive();
+                //CoreService.newTruePositive();
                 NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
             } else if (ACTION_NO.equals(action)) {
-                CoreService.newFalsePositive();
+                //CoreService.newFalsePositive();
                 NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
                 Intent incorrecetUnlockIntent = new Intent("INCORRECT_UNLOCK");
                 incorrecetUnlockIntent.putExtras(intent.getExtras());

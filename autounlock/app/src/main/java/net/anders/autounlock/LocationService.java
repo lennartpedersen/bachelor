@@ -19,7 +19,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class LocationService extends Service {
-    private String TAG = "LocatoinService";
+    private String TAG = "LocationService";
 
     private int startMode;       // indicates how to behave if the service is killed
     private IBinder binder;      // interface for clients that bind

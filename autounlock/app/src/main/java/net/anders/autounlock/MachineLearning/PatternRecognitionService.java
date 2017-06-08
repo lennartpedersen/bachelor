@@ -80,7 +80,7 @@ public class PatternRecognitionService extends Service {
                             running = false;
                             stopSelf();
                         } else {
-                            CoreService.newTrueNegative();
+                            //CoreService.newTrueNegative();
                         }
 
                         try {

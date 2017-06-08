@@ -24,19 +24,15 @@ import com.google.android.gms.location.LocationServices;
 import net.anders.autounlock.Export.Export;
 import net.anders.autounlock.MachineLearning.DatabaseRetriever;
 import net.anders.autounlock.MachineLearning.PatternRecognitionService;
+import net.anders.autounlock.MachineLearning.RecogniseSequence;
 import net.anders.autounlock.MachineLearning.RecurrentNN;
-import net.anders.autounlock.MachineLearning.UnlockData;
 import net.anders.autounlock.MachineLearning.WindowProcess;
-import net.anders.autounlock.MachineLearning.TrainingProcess;
 import net.anders.autounlock.MachineLearning.WindowData;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import be.ac.ulg.montefiore.run.jahmm.Hmm;
-import be.ac.ulg.montefiore.run.jahmm.ObservationVector;
 
 public class CoreService extends Service implements
         GoogleApiClient.ConnectionCallbacks,
@@ -59,7 +55,6 @@ public class CoreService extends Service implements
     private net.anders.autounlock.Geofence geofence;
 
     static List<BluetoothData> recordedBluetooth = new ArrayList<BluetoothData>();
-    static List<WifiData> recordedWifi = new ArrayList<WifiData>();
     static List<LocationData> recordedLocation = new ArrayList<LocationData>();
     static volatile ArrayList<String> activeInnerGeofences = new ArrayList<>();
     static ArrayList<String> activeOuterGeofences = new ArrayList<>();
@@ -88,15 +83,11 @@ public class CoreService extends Service implements
     public static boolean isTraining = false; // Is app in training mode, stop pattern recog service
     public static boolean isMoving = false; // Are we currently moving
 
-    // List of vector observations computed from orientation and velocity
-    public static List<Hmm<ObservationVector>> HMM = new ArrayList<>();
-
     // For ours what up
     public static Map<Integer, Double[][]> RNN = new HashMap<>();
 
     // Binder given to clients
     private final IBinder localBinder = new LocalBinder();
-
 
     // Class used for the client Binder.  Because we know this service always
     // runs in the same process as its clients, we don't need to deal with IPC.
@@ -158,7 +149,6 @@ public class CoreService extends Service implements
 
         accelerometerIntent = new Intent(this, AccelerometerService.class);
         locationIntent = new Intent(this, LocationService.class);
-        wifiIntent = new Intent(this, WifiService.class);
         bluetoothIntent = new Intent(this, BluetoothService.class);
         scannerIntent = new Intent(this, ScannerService.class);
         patternRecognitionIntent = new Intent(this, PatternRecognitionService.class);
@@ -178,8 +168,8 @@ public class CoreService extends Service implements
         registerReceiver(startPatternRecognitionReceiver, startPatternRecognitionFilter);
 
         /*  MACHINE LEARNING VALUES */
-        CoreService.windowBufferSize = 50;
-        CoreService.windowSize = 20;
+        CoreService.windowBufferSize = 100;
+        CoreService.windowSize = 50;
         CoreService.windowPercentageOverlap = .2;
         CoreService.windowOverlap =  CoreService.windowSize - ((int)(CoreService.windowSize *  CoreService.windowPercentageOverlap));
         CoreService.reqUnlockTraining = 5;
@@ -193,7 +183,6 @@ public class CoreService extends Service implements
         // Train the models as the first thing, before application can be used
         if (!dataStore.getUnlocks().isEmpty()) {
             MainActivity.lockView.setText("Updating intelligence \n please be patient");
-            //trainModel();
 
             // Get old correct unlocks from DB.
             try {
@@ -293,7 +282,6 @@ public class CoreService extends Service implements
 
                             startAccelerometerService();
                             startBluetoothService();
-                            startWifiService();
                             scanForLocks();
 
                             MainActivity.lockDoor.setVisibility(View.VISIBLE);
@@ -320,7 +308,6 @@ public class CoreService extends Service implements
 
                             stopAccelerometerService();
                             stopBluetoothService();
-                            stopWifiService();
                             stopPatternRecognitionService();
 
                             MainActivity.lockDoor.setVisibility(View.GONE);
@@ -357,7 +344,7 @@ public class CoreService extends Service implements
                 isDetailedDataCollectionStarted = false;
                 isLocationDataCollectionStarted = false;
             } else if ("INCORRECT_UNLOCK".equals(action)) {
-                dataStore.deleteCluster(extras.getInt("Cluster"));
+
                 isDetailedDataCollectionStarted = true;
                 isLocationDataCollectionStarted = true;
 
@@ -369,7 +356,6 @@ public class CoreService extends Service implements
 
                 startAccelerometerService();
                 startBluetoothService();
-                startWifiService();
                 startLocationService();
                 startPatternRecognitionService();
                 isDetailedDataCollectionStarted = true;
@@ -380,7 +366,6 @@ public class CoreService extends Service implements
             } else if ("STOP_RECOGNISE".equals(action)) {
                 stopAccelerometerService();
                 stopBluetoothService();
-                stopWifiService();
                 stopLocationService();
                 stopPatternRecognitionService();
                 isScanningForLocks = false;
@@ -418,20 +403,6 @@ public class CoreService extends Service implements
 
     void stopLocationService() {
         stopService(locationIntent);
-    }
-
-    void startWifiService() {
-        Log.v(TAG, "Starting WifiService");
-        Thread wifiServiceThread = new Thread() {
-            public void run() {
-                startService(wifiIntent);
-            }
-        };
-        wifiServiceThread.start();
-    }
-
-    void stopWifiService() {
-        stopService(wifiIntent);
     }
 
     void startBluetoothService() {
@@ -489,12 +460,6 @@ public class CoreService extends Service implements
         geofence.unregisterGeofences(this, mGoogleApiClient);
     }
 
-    // Store decision output values - used for confusion matrix
-    public static void newTruePositive() { long time = System.currentTimeMillis(); dataStore.insertDecision(0, time); }
-    public static void newFalseNegative() { long time = System.currentTimeMillis(); dataStore.insertDecision(1, time); }
-    public static void newFalsePositive() { long time = System.currentTimeMillis(); dataStore.insertDecision(2, time); }
-    public static void newTrueNegative() { long time = System.currentTimeMillis(); dataStore.insertDecision(3, time); }
-
     // Collect environmental data before saving the lock
     void saveLock(final String lockMAC) {
         new Thread(new Runnable() {
@@ -503,7 +468,6 @@ public class CoreService extends Service implements
                 String passphrase = "";
 
                 startBluetoothService();
-                startWifiService();
                 startLocationService();
 
                 try {
@@ -513,7 +477,6 @@ public class CoreService extends Service implements
                 }
 
                 stopBluetoothService();
-                stopWifiService();
                 stopLocationService();
 
                 if (success && recordedLocation.size() != 0) {
@@ -526,8 +489,7 @@ public class CoreService extends Service implements
                             30,
                             100,
                             -1f,
-                            recordedBluetooth,
-                            recordedWifi
+                            recordedBluetooth
                     );
                     Log.d(TAG, lockData.toString());
                     newLock(lockData);
@@ -559,16 +521,6 @@ public class CoreService extends Service implements
                     lockData.getNearbyBluetoothDevices().get(i).getRssi(),
                     lockData.getMAC(),
                     lockData.getNearbyBluetoothDevices().get(i).getTime()
-            );
-        }
-
-        for (int i = 0; i < lockData.getNearbyWifiAccessPoints().size(); i++) {
-            dataStore.insertWifi(
-                    lockData.getNearbyWifiAccessPoints().get(i).getSsid(),
-                    lockData.getNearbyWifiAccessPoints().get(i).getMac(),
-                    lockData.getNearbyWifiAccessPoints().get(i).getRssi(),
-                    lockData.getMAC(),
-                    lockData.getNearbyWifiAccessPoints().get(i).getTime()
             );
         }
 
@@ -626,7 +578,7 @@ public class CoreService extends Service implements
         WindowData[] snapshot = RingBuffer.getSnapshot();
 
         // Insert the sequential data into the database
-        dataStore.insertUnlock(snapshot);
+        dataStore.insertWindows(snapshot);
 
         int cntUnlock = dataStore.getUnlockCount();
 
@@ -634,16 +586,9 @@ public class CoreService extends Service implements
         if (cntUnlock >= reqUnlockTraining) {
             trainingComplete = true;
             Log.v(TAG, "START TRAINING");
-            HMM = new ArrayList<>();
-
-            // False negative condition as the door did not catch the unlock
-            if (cntUnlock != reqUnlockTraining) {
-                Log.v(TAG, "Inserting FN for unlocking");
-                newFalseNegative();
-            }
 
             // Start training procedure
-            trainModel();
+            trainModel(snapshot);
 
             Log.v(TAG, "TRAINING FINISHED");
             isTraining = false;
@@ -651,31 +596,25 @@ public class CoreService extends Service implements
     }
 
     // Initiate training of the HMM
-    public void trainModel(){
-        /*if (!dataStore.getUnlocks().isEmpty()) {
-            new TrainingProcess(dataStore.getUnlocks());
-        }*/
+    public void trainModel(WindowData[] snapshot){
+
         try {
-            DatabaseRetriever.readOldData();
-            RecurrentNN.trainNetwork();
+            RecurrentNN.trainNetwork(snapshot);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    // Method to check if the unlock is already clustered
-    public static boolean isUnlockClustered(int id) {
-        return dataStore.isClustered(id);
-    }
-
-    // Method to update the cluster value
-    public static void updateCluster(int cur_id, int next_id) {
-        dataStore.updateCluster(cur_id, next_id);
-    }
-
-    // Method to retreive the cluster id
-    public static int getClusterId(int id) {
-        return dataStore.getClusterId(id);
+    public void toooast() {
+        //double d = RecogniseSequence.getProbability();
+        String s = "";
+        for (Double[] d : RecogniseSequence.getSequence()) {
+            for (Double dd : d) {
+                s+=dd + " ";
+            }
+        }
+        Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
     }
 
     public static void accelerometerEvent(AccelerometerData anAccelerometerEvent) {
@@ -686,15 +625,15 @@ public class CoreService extends Service implements
     void exportDB() {
         Export.Database();
         Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
+        //toooast();
+        //NotificationUtility notification = new NotificationUtility();
+        //notification.displayUnlockNotification(getApplicationContext(),1);
+
     }
 
     // Method to get a list of unlocks sessions
-    public static ArrayList<UnlockData> getUnlocks() {
+    public static ArrayList<ArrayList<WindowData>> getUnlocks() {
         return dataStore.getUnlocks();
     }
 
-    // Method to check if the given environment is approved
-    static boolean environmentApproved(String foundLock) {
-        return Environment.makeDecision(foundLock);
-    }
 }

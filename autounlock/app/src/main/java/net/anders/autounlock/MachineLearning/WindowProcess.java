@@ -110,8 +110,8 @@ public class WindowProcess {
         double velocity = Math.sqrt(Math.pow(speedX, 2) + Math.pow(speedY, 2));
 
         // Save the collected data into a window
-        return new WindowData(meanAccX, meanAccY,
-                speedX, speedY, meanOri,
+        //-1 returned as id - does not require unlockid until put in database
+        return new WindowData(-1, speedX, speedY, meanOri,
                 velocity, meanMag, time_current);
     }
 }

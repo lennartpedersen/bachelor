@@ -1,1 +1,1 @@
-include ':app'
+include ':app', ':deeplearning4j-ui-0.4-rc3.8'
