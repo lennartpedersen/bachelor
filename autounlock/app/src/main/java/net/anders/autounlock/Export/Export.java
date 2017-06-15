@@ -61,7 +61,7 @@ public class Export {
         return "AutoUnlock-" + list.length + ".db";
     }
 
-//    public static void CsvRawAcc(List<AccelerometerData> calibrationAccelerometer, String activity) throws IOException {
+//    public static void CsvRawAcc(List<SensorData> calibrationAccelerometer, String activity) throws IOException {
 //
 //        File root = Environment.getExternalStorageDirectory();
 //        File gpxfile = new File(root, activity + ".csv");
@@ -70,7 +70,7 @@ public class Export {
 //            writer = new FileWriter(gpxfile);
 //            writeCsvHeader(activity.toString(), "x","y","z", "time", "ori");
 //
-//            for (AccelerometerData acc: calibrationAccelerometer) {
+//            for (SensorData acc: calibrationAccelerometer) {
 //                writeCsvData(activity.toString(), acc.getAccelerationX(), acc.getAccelerationY(), acc.getAccelerationZ(), acc.getTime(), acc.getOrientation());
 //            }
 //
@@ -96,7 +96,7 @@ public class Export {
 //        destination.close();
 //    }
 
-//    public static void CsvRawAcc(List<AccelerometerData> calibrationAccelerometer, String activity) throws IOException {
+//    public static void CsvRawAcc(List<SensorData> calibrationAccelerometer, String activity) throws IOException {
 //
 //        File root = Environment.getExternalStorageDirectory();
 //        File gpxfile = new File(root, activity + ".csv");
@@ -105,7 +105,7 @@ public class Export {
 //            writer = new FileWriter(gpxfile);
 //            writeCsvHeader("time", "acc_x","acc_y", "speed_x", "speed_y", "ori");
 //
-//            for (AccelerometerData acc: calibrationAccelerometer) {
+//            for (SensorData acc: calibrationAccelerometer) {
 //                writeCsvData(acc.getTime(), acc.getAccelerationX(), acc.getAccelerationY(), acc.getSpeedX(), acc.getSpeedY(), acc.getOrientation());
 //            }
 //
@@ -298,7 +298,7 @@ public class Export {
                 writeCsvWindowHeader("degree", "velocity");
 
                 for (WindowData window: windows) {
-                    writeCsvWindowData(window.getOrientation(), window.getVelocity());
+                    writeCsvWindowData(window.getOrientation(),window.getAccelerationMag());
                 }
 
                 writer.flush();

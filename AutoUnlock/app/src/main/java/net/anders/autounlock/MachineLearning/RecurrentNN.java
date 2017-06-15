@@ -27,6 +27,8 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
@@ -36,16 +38,16 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 import java.util.Map;
 
 public class RecurrentNN {
-    private final static int NUM_SAMPLES = 375;
-    private final static int N_INPUT = 2;
-    private final static int N_OUTPUT = 1;
+    private final static int NUM_SAMPLES = 25;
+    private final static int N_INPUT = 3;
+    private final static int N_OUTPUT = 2;
 
     private static MultiLayerNetwork myNetwork;
 
-    public static void main(String args[]) throws Exception {
+    /*public static void main(String args[]) throws Exception {
         startTraining();
         getProbability();
-    }
+    }*/
 
     public static void startTraining() throws Exception {
         constructNetwork();
@@ -59,25 +61,16 @@ public class RecurrentNN {
                 .name("Input")
                 .build();
                 */
-        //Prøv dobbelt lstm layer
-        //DenseLayer layer0 = new DenseLayer.Builder()
-        //        .nIn(NUM_SAMPLES)
-        //        .nOut(NUM_SAMPLES)
-        //        .build();
 
         GravesLSTM layer1 = new GravesLSTM.Builder()
                 .activation(Activation.TANH)
-
                 .nIn(NUM_SAMPLES)
-                .nOut(NUM_SAMPLES)
+                .nOut(100)
                 .build();
-
-
-
 
         RnnOutputLayer outputLayer = new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
                 .activation(Activation.SOFTMAX)
-                .nIn(NUM_SAMPLES)
+                .nIn(100)
                 .nOut(N_OUTPUT)
                 .build();
 
@@ -90,15 +83,13 @@ public class RecurrentNN {
                 .learningRate(0.01);
 
         NeuralNetConfiguration.ListBuilder listBuilder = nncBuilder.list();
-        //listBuilder.layer(0, layer0);
         listBuilder.layer(0, layer1);
-        //listBuilder.layer(2, layer2);
         listBuilder.layer(1, outputLayer);
 
         //listBuilder.backprop(true);
         listBuilder.backpropType(BackpropType.TruncatedBPTT) //Not necessary if timeseries are short.
-                .tBPTTForwardLength(25)  //Maximum length = length of time series
-                .tBPTTBackwardLength(25);
+                .tBPTTForwardLength(20)  //Maximum length = length of time series
+                .tBPTTBackwardLength(20);
 
         myNetwork = new MultiLayerNetwork(listBuilder.build());
         myNetwork.init();
@@ -106,58 +97,35 @@ public class RecurrentNN {
         trainNetworkOnStart();
     }
 
-    private static void constructNetwork2() {
-        MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
-                .seed(123)    //Random number generator seed for improved repeatability. Optional.
-                .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).iterations(1)
-                .weightInit(WeightInit.XAVIER)
-                .updater(Updater.NESTEROVS).momentum(0.9)
-                .learningRate(0.005)
-                .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)  //Not always required, but helps with this data set
-                .gradientNormalizationThreshold(0.5)
-                .list()
-                .layer(0, new GravesLSTM.Builder().activation(Activation.TANH).nIn(N_INPUT).nOut(10).build())
-                .layer(1, new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.SOFTMAX).nIn(10).nOut(N_OUTPUT).build())
-                .pretrain(false).backprop(true).build();
-
-        myNetwork = new MultiLayerNetwork(conf);
-        myNetwork.init();
-    }
 
     public static void trainNetworkOnStart() throws Exception {
-        //Map<Integer, Double[][]> trainData = CoreService.RNN;
-        Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
-
-
+        Map<Integer, Double[][]> trainData = CoreService.RNN;
+        //Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
 
         for (int i = 0; i < trainData.keySet().size(); i++) {
             System.out.println("Fitting " + (i + 1) + " of " + trainData.keySet().size());
-            //System.out.println("Orientation = " + array[0][i] + ", velocity = " + array[1][i]);
 
             Double[][] trainArray = trainData.get(i);
-            //System.out.println("Size: " + trainArray.length + ", " + trainArray[0].length);
 
             INDArray trainingInputs = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
-            INDArray trainingOutputs = Nd4j.zeros(1, 1);
+            INDArray trainingOutputs = Nd4j.zeros(1, NUM_SAMPLES);
 
             for (int j = 0; j < NUM_SAMPLES; j++) {
                 trainingInputs.putScalar(new int[]{0,j}, trainArray[0][j]); //Orientation
-                trainingInputs.putScalar(new int[]{1,j}, trainArray[1][j]); //Velocity
+                trainingInputs.putScalar(new int[]{1,j}, trainArray[1][j]); //Acceleration X
+                trainingInputs.putScalar(new int[]{2,j}, trainArray[2][j]); //Acceleration Y
             }
 
-            trainingOutputs.putScalar(new int[]{0,0}, 1);
+            for (int j = 0; j < NUM_SAMPLES-1; j++) {
+                trainingOutputs.putScalar(new int[]{0,j}, 0);
+            }
 
+            trainingOutputs.putScalar(new int[]{0,NUM_SAMPLES-1}, DatabaseRetriever.getUnlockValue(i+1));
 
-            //System.out.println("Shape = [" + trainingInputs.shape()[0] + "," + trainingInputs.shape()[1] + "]");
-
-            //Set up UI
-            //UIServer uiServer = UIServer.getInstance();
-            //StatsStorage statsStorage = new InMemoryStatsStorage();
-            //uiServer.attach(statsStorage);
-            //myNetwork.setListeners(new StatsListener(statsStorage));
 
             DataSet myData = new DataSet(trainingInputs, trainingOutputs);
+
+            myData.normalize();
 
             myNetwork.fit(myData);
         }
@@ -166,14 +134,17 @@ public class RecurrentNN {
     public static Double[][] createSequenceData(WindowData[] snapshot){
         Double[][] sequence = new Double[2][];
         Double[] ori = new Double[snapshot.length];
-        Double[] vel = new Double[snapshot.length];
+        Double[] accX = new Double[snapshot.length];
+        Double[] accY = new Double[snapshot.length];
         for (int i = 0; i < snapshot.length; i++) {
             WindowData window = snapshot[i];
             ori[i] = window.getOrientation();
-            vel[i] = window.getVelocity();
+            accX[i] = window.getAccelerationX();
+            accY[i] = window.getAccelerationY();
         }
         sequence[0] = ori;
-        sequence[1] = vel;
+        sequence[1] = accX;
+        sequence[2] = accY;
 
         return sequence;
     }
@@ -184,15 +155,19 @@ public class RecurrentNN {
         //System.out.println("Size: " + trainArray.length + ", " + trainArray[0].length);
 
         INDArray trainingInputs = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
-        INDArray trainingOutputs = Nd4j.zeros(1, 1);
+        INDArray trainingOutputs = Nd4j.zeros(1, NUM_SAMPLES);
 
         for (int j = 0; j < NUM_SAMPLES; j++) {
             trainingInputs.putScalar(new int[]{0,j}, trainArray[0][j]); //Orientation
-            trainingInputs.putScalar(new int[]{1,j}, trainArray[1][j]); //Velocity
+            trainingInputs.putScalar(new int[]{1,j}, trainArray[1][j]); //Acceleration X
+            trainingInputs.putScalar(new int[]{2,j}, trainArray[2][j]); //Acceleration Y
         }
 
-        trainingOutputs.putScalar(new int[]{0,0}, 1);
+        for (int i = 0; i < NUM_SAMPLES-1; i++) {
+            trainingOutputs.putScalar(new int[]{0,i}, 0);
+        }
 
+        trainingOutputs.putScalar(new int[]{0,NUM_SAMPLES-1}, 1);
 
         //System.out.println("Shape = [" + trainingInputs.shape()[0] + "," + trainingInputs.shape()[1] + "]");
 
@@ -206,7 +181,7 @@ public class RecurrentNN {
      *
      * See: https://deeplearning4j.org/usingrnns
      */
-    public static double getProbability() throws Exception {
+    public static double getProbability(Double[][] sequence) throws Exception {
         //Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
 
         /*for (Double[] dd: sequence
@@ -223,24 +198,25 @@ public class RecurrentNN {
 
         //Double[][] array = trainData.get(7);
 
-        Double[][] sequence = DatabaseRetriever.readTestData();
+        //Double[][] sequence = DatabaseRetriever.readTestData();
         if (sequence == null || sequence[0].length == 0) {
             System.out.println("TestData is null or zero");
             return 0;
         }
 
-        INDArray newShit = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
+        INDArray newData = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
 
         for (int i = 0; i < NUM_SAMPLES; i++) {
-            newShit.putScalar(new int[]{0, i}, sequence[0][i]); //Orientation
-            newShit.putScalar(new int[]{1, i}, sequence[1][i]); //Velocity
+            newData.putScalar(new int[]{0, i}, sequence[0][i]); //Orientation
+            newData.putScalar(new int[]{1, i}, sequence[1][i]); //Acceleration X
+            newData.putScalar(new int[]{2, i}, sequence[2][i]); //Acceleration Y
         }
 
-        INDArray arr = myNetwork.output(newShit);
+        INDArray arr = myNetwork.output(newData);
         //System.out.println(arr);
         int length = arr.size(2);
         INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length - 1));
-        double prob = probs.getDouble(0);
+        double prob = probs.getDouble(1);
         //Log.v("sequenceinformation", "Prob = " + prob);
         System.out.println("Probability: " + prob);
         return  prob;

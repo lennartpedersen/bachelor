@@ -2,11 +2,6 @@ package net.anders.autounlock.MachineLearning;
 
 import net.anders.autounlock.CoreService;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,36 +19,33 @@ public class DatabaseRetriever {
     private static Map<Integer, Double[][]> tupleDict = new HashMap<>();
 
     public static void readOldData() throws Exception {
-        InputStream is = new FileInputStream(new File("C:\\Users\\Lennart Pedersen\\Dropbox\\Bachelor\\databases\\AutoUnlock-13.csv"));
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        reader.readLine(); // To get rid of attribute titles
+        //InputStream is = new FileInputStream(new File("C:\\Users\\Lennart Pedersen\\Dropbox\\Bachelor\\databases\\AutoUnlock-13.csv"));
+        //BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        //reader.readLine(); // To get rid of attribute titles
 
-        ArrayList<Double> velocity = new ArrayList<>();
+        ArrayList<Double> accelerationX = new ArrayList<>();
+        ArrayList<Double> accelerationY = new ArrayList<>();
         ArrayList<Double> orientation = new ArrayList<>();
-
-        /*
-        for (UnlockData u : CoreService.getUnlocks())
-        {
-            int unlockID = u.getId();
-
-            for (WindowData w : u.getWindows()
-                    ) {
-                velocity.add(w.getVelocity());
+        int unlockID = 0;
+        for (ArrayList<WindowData> aw : CoreService.getUnlocks()) {
+            for (WindowData w : aw) {
+                unlockID = w.getId();
+                accelerationX.add(w.getAccelerationX());
+                accelerationY.add(w.getAccelerationY());
                 orientation.add(w.getOrientation());
             }
 
-            Double[][] tuples = convertToTupleArray(orientation, velocity);
+            Double[][] tuples = convertToTupleArray(orientation, accelerationX, accelerationY);
+            //UnlockID-1 as database is 1-indexed instead of 0-indexed.
             CoreService.RNN.put(unlockID-1, tuples);
-            //tupleDict.put(index-1, tuples);
 
-            velocity = new ArrayList<>();
+            accelerationX = new ArrayList<>();
+            accelerationY = new ArrayList<>();
             orientation = new ArrayList<>();
+        }
 
 
-
-        }*/
-
-        try {
+        /*try {
             String line;
             String lastUnlockID = "1";
             while((line=reader.readLine()) != null) {
@@ -69,8 +61,8 @@ public class DatabaseRetriever {
                     int index = Integer.parseInt(lastUnlockID);
 
 
-                    //CoreService.RNN.put(index-1, tuples);
-                    tupleDict.put(index-1, tuples);
+                    CoreService.RNN.put(index-1, tuples);
+                    //tupleDict.put(index-1, tuples);
                     lastUnlockID = newUnlockID;
 
                     velocity = new ArrayList<>();
@@ -87,22 +79,26 @@ public class DatabaseRetriever {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
+        }*/
     }
 
-    private static Double[][] convertToTupleArray(ArrayList<Double> orientation, ArrayList<Double> velocity) {
+
+    public static int getUnlockValue(int id) {
+        return CoreService.getUnlockValue(id);
+    }
+
+    private static Double[][] convertToTupleArray(ArrayList<Double> orientation, ArrayList<Double> accelerationX, ArrayList<Double> accelerationY) {
         int length = orientation.size();
 
-        Double[][] array = new Double[2][];
+        Double[][] array = new Double[3][];
         array[0] = new Double[length];
         array[1] = new Double[length];
-
+        array[2] = new Double[length];
 
         for (int i = 0; i < length; i++) {
             array[0][i] = orientation.get(i);
-            array[1][i] = velocity.get(i);
-
-            //System.out.println("Orientation = " + array[0][i] + ", velocity = " + array[1][i]);
+            array[1][i] = accelerationX.get(i);
+            array[2][i] = accelerationY.get(i);
         }
 
         return array;
@@ -115,7 +111,7 @@ public class DatabaseRetriever {
         return tupleDict;
     }
 
-    public static Double[][] readTestData() throws Exception {
+    /*public static Double[][] readTestData() throws Exception {
         InputStream is = new FileInputStream(new File("C:\\Users\\Lennart Pedersen\\Dropbox\\Bachelor\\databases\\AutoUnlock-13-test.csv"));
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         //reader.readLine(); // To get rid of attribute titles
@@ -146,6 +142,6 @@ public class DatabaseRetriever {
         }
 
         return convertToTupleArray(orientation, velocity);
-    }
+    }*/
 
 }

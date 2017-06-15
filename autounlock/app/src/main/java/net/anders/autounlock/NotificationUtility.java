@@ -19,14 +19,13 @@ public class NotificationUtility {
     public static final String ACTION_YES = "action_yes";
     public static final String ACTION_NO = "action_no";
 
-    public void displayUnlockNotification(Context context, int cluster) {
+    public void displayUnlockNotification(Context context) {
 
         Intent yesIntent = new Intent(context, NotificationActionService.class)
                 .setAction(ACTION_YES);
 
         Intent noIntent = new Intent(context, NotificationActionService.class)
                 .setAction(ACTION_NO);
-        noIntent.putExtra("Cluster", cluster);
 
         // use System.currentTimeMillis() to have adapter unique ID for the pending intent
         PendingIntent pendingYesIntent = PendingIntent.getService(
@@ -71,14 +70,13 @@ public class NotificationUtility {
             String action = intent.getAction();
             Log.d("Notification", "Received notification action: " + action);
             if (ACTION_YES.equals(action)) {
-                //CoreService.newTruePositive();
+                CoreService.handleUnlock();
                 NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
             } else if (ACTION_NO.equals(action)) {
-                //CoreService.newFalsePositive();
+                CoreService.handleNotUnlock();
                 NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
-                Intent incorrecetUnlockIntent = new Intent("INCORRECT_UNLOCK");
-                incorrecetUnlockIntent.putExtras(intent.getExtras());
-                sendBroadcast(incorrecetUnlockIntent);
+                Intent incorrectUnlockIntent = new Intent("INCORRECT_UNLOCK");
+                sendBroadcast(incorrectUnlockIntent);
             }
         }
     }

@@ -33,7 +33,7 @@
             android:name=".CoreService"
             android:enabled="true" />
         <service
-            android:name=".AccelerometerService"
+            android:name=".SensorService"
             android:enabled="true" />
         <service
             android:name=".LocationService"

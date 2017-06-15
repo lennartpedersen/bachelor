@@ -36,10 +36,13 @@ class DataStore {
     private static final String WINDOW_ID = "window_id";
     private static final String WINDOW_UNLOCK_ID = "unlock_id";
     private static final String WINDOW_ORIENTATION = "orientation";
-    private static final String WINDOW_VELOCITY = "velocity";
-    private static final String WINDOW_SPEED_X = "speed_x";
-    private static final String WINDOW_SPEED_Y = "speed_y";
     private static final String WINDOW_ACCELERATION_MAG = "acceleration_mag";
+    private static final String WINDOW_ACCELERATION_X = "acceleration_x";
+    private static final String WINDOW_ACCELERATION_Y = "acceleration_y";
+
+    private static final String UNLOCK_TABLE = "unlock";
+    private static final String UNLOCK_ID = "unlock_id";
+    private static final String UNLOCK_VAL = "value";
 
     private SQLiteDatabase database;
     private DatabaseHelper databaseHelper;
@@ -145,6 +148,23 @@ class DataStore {
         }
     }
 
+    void insertUnlockValue(int val) {
+        ContentValues contentValues = new ContentValues();
+        Cursor c = database.rawQuery("SELECT MAX(unlock_id) FROM "+ UNLOCK_TABLE + ";", null);
+        c.moveToFirst();
+        int id = c.getInt(0) + 1;
+        contentValues.put(UNLOCK_ID, id);
+        contentValues.put(UNLOCK_VAL, val);
+        try {
+            database = databaseHelper.getWritableDatabase();
+            database.beginTransaction();
+            database.replace(UNLOCK_TABLE, null, contentValues);
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+    }
+
     void insertWindows(WindowData[] snapshot) {
         ContentValues contentValues = new ContentValues();
         Cursor c = database.rawQuery("SELECT MAX(unlock_id) FROM "+ WINDOW_TABLE + ";", null);
@@ -153,10 +173,9 @@ class DataStore {
         contentValues.put(WINDOW_UNLOCK_ID, id);
 
         for (WindowData window: snapshot) {
-            contentValues.put(WINDOW_SPEED_X, window.getSpeedX());
-            contentValues.put(WINDOW_SPEED_Y, window.getSpeedY());
+            contentValues.put(WINDOW_ACCELERATION_X, window.getAccelerationX());
+            contentValues.put(WINDOW_ACCELERATION_Y, window.getAccelerationY());
             contentValues.put(WINDOW_ORIENTATION, window.getOrientation());
-            contentValues.put(WINDOW_VELOCITY, window.getVelocity());
             contentValues.put(WINDOW_ACCELERATION_MAG, window.getAccelerationMag());
             contentValues.put(TIMESTAMP, window.getTime());
 
@@ -188,6 +207,23 @@ class DataStore {
         return cnt;
     }
 
+    int getUnlockValue(int id) {
+        int idCursor;
+        try {
+            database = databaseHelper.getReadableDatabase();
+            database.beginTransaction();
+            String countQuery;
+            countQuery = "SELECT value FROM " + UNLOCK_TABLE + " WHERE " + UNLOCK_ID + " = " + id;
+            Cursor cursor = database.rawQuery(countQuery, null);
+            cursor.moveToFirst();
+            idCursor = cursor.getInt(0);
+            cursor.close();
+        } finally {
+            database.endTransaction();
+        }
+        return idCursor;
+    }
+
     // Method to retreive unlock sessions
     ArrayList<ArrayList<WindowData>> getUnlocks() {
         ArrayList<ArrayList<WindowData>> unlocks = new ArrayList<>();
@@ -208,10 +244,9 @@ class DataStore {
             if (unlockCursor.moveToFirst()) {
                 do {
                     cur_id = unlockCursor.getInt(unlockCursor.getColumnIndex(WINDOW_UNLOCK_ID));
-                    double speedX = unlockCursor.getDouble(unlockCursor.getColumnIndex(WINDOW_SPEED_X));
-                    double speedY = unlockCursor.getDouble(unlockCursor.getColumnIndex(WINDOW_SPEED_Y));
+                    double accelerationX = unlockCursor.getDouble(unlockCursor.getColumnIndex(WINDOW_ACCELERATION_X));
+                    double accelerationY = unlockCursor.getDouble(unlockCursor.getColumnIndex(WINDOW_ACCELERATION_Y));
                     double orientation = unlockCursor.getDouble(unlockCursor.getColumnIndex(WINDOW_ORIENTATION));
-                    double velocity = unlockCursor.getDouble(unlockCursor.getColumnIndex(WINDOW_VELOCITY));
                     double accelerationMag = unlockCursor.getDouble(unlockCursor.getColumnIndex(WINDOW_ACCELERATION_MAG));
                     double time = unlockCursor.getDouble(unlockCursor.getColumnIndex(TIMESTAMP));
 
@@ -219,13 +254,11 @@ class DataStore {
                         unlocks.add(unlock);
                         unlock = new ArrayList<>();
                     }
-                    unlock.add(new WindowData(cur_id,speedX, speedY, orientation, velocity, accelerationMag, time));
+                    unlock.add(new WindowData(cur_id,accelerationX, accelerationY, orientation, accelerationMag, time));
                     prev_id = cur_id;
                 } while (unlockCursor.moveToNext());
 
                 // Add current unlock when queue is at its end
-                //UnlockData u = new UnlockData(cur_id, unlock);
-                //unlocks.add(u);
                 unlocks.add(unlock);
             }
             unlockCursor.close();
@@ -283,18 +316,22 @@ class DataStore {
             database.execSQL("CREATE TABLE " + WINDOW_TABLE + " ("
                     + WINDOW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + WINDOW_UNLOCK_ID + " INTEGER,"
-                    + WINDOW_SPEED_X + " DOUBLE, "
-                    + WINDOW_SPEED_Y + " DOUBLE, "
+                    + WINDOW_ACCELERATION_X + " DOUBLE, "
+                    + WINDOW_ACCELERATION_Y + " DOUBLE, "
                     + WINDOW_ORIENTATION + " DOUBLE, "
-                    + WINDOW_VELOCITY + " DOUBLE, "
                     + WINDOW_ACCELERATION_MAG + " DOUBLE, "
                     + TIMESTAMP + " LONG)");
+
+            database.execSQL("CREATE TABLE " + UNLOCK_TABLE + " ("
+                    + UNLOCK_ID + " INTEGER PRIMARY KEY,"
+                    + UNLOCK_VAL + " INTEGER)");
         }
 
         private void dropDatastore() {
             database.execSQL("DROP TABLE IF EXISTS " + LOCK_TABLE);
             database.execSQL("DROP TABLE IF EXISTS " + BLUETOOTH_TABLE);
             database.execSQL("DROP TABLE IF EXISTS " + WINDOW_TABLE);
+            database.execSQL("DROP TABLE IF EXISTS " + UNLOCK_TABLE);
         }
     }
 }

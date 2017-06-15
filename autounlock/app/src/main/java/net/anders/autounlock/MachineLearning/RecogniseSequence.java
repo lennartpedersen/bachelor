@@ -25,9 +25,6 @@ public class RecogniseSequence {
 
     public static Double[][] sequence;
     public static double probability = 0;
-    public double bestMatchProb = 0.00000000000000000000000001;
-    public int bestMatchNo = -1;
-    public int currentMatchNo = -1;
 
     public static Double[][] getSequence() {
         return sequence;
@@ -47,51 +44,41 @@ public class RecogniseSequence {
         // Check if a match was found
         if (probability > 0.5){
 
-            System.out.println("Best match is RNN: " + bestMatchNo +  " with probability " + probability);
+            System.out.println("Best match is RNN: " + " with probability " + probability);
 
             // Send a notification to the user that the lock was successfully unlocked
             NotificationUtility notification = new NotificationUtility();
-            notification.displayUnlockNotification(context, bestMatchNo+1);
+            notification.displayUnlockNotification(context);
             Log.v("Prob before reset = ", "" + probability);
             probability = 0;
-            bestMatchNo = -1;
-            bestMatchProb = 0.00000000000000000000000001;
             return true;
         }
         return false;
     }
 
     public void createSequenceData(WindowData[] snapshot){
-        sequence = new Double[2][];
+        sequence = new Double[3][];
         Double[] ori = new Double[snapshot.length];
-        Double[] vel = new Double[snapshot.length];
+        Double[] accX = new Double[snapshot.length];
+        Double[] accY = new Double[snapshot.length];
         for (int i = 0; i < snapshot.length; i++) {
             WindowData window = snapshot[i];
             ori[i] = window.getOrientation();
-            vel[i] = window.getVelocity();
+            accX[i] = window.getAccelerationX();
+            accY[i] = window.getAccelerationY();
         }
         sequence[0] = ori;
-        sequence[1] = vel;
+        sequence[1] = accX;
+        sequence[2] = accY;
     }
 
 
     // Evaluation problem - Forward-Backward Calculator
     public void getProbability(Double[][] sequence){
-
-        //ForwardBackwardCalculator fbc = new ForwardBackwardCalculator(sequence, HMM);
-
-        // Compute the probability with the Forward-Backward Calculator
-        //probability = fbc.probability();
         try {
-            //Outcommented while te
-            //probability = RecurrentNN.getProbability(sequence);
+            probability = RecurrentNN.getProbability(sequence);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 }
-
-
-//        ViterbiCalculator vit = new ViterbiCalculator(sequence, hmm);
-//        probability = vit.lnProbability();
-//        System.out.println("FBC: - " + label + ": "+ probability);

@@ -1,6 +1,6 @@
 package net.anders.autounlock.MachineLearning;
 
-import net.anders.autounlock.AccelerometerData;
+import net.anders.autounlock.SensorData;
 import net.anders.autounlock.CoreService;
 import net.anders.autounlock.RingBuffer;
 
@@ -15,39 +15,38 @@ public class WindowProcess {
 
     private static final String TAG = "WindowProcess";
 
-    private List<AccelerometerData> currentAccelerometerList = new ArrayList<>();
-    private List<AccelerometerData> nextAccelerometerList = new ArrayList<>();
-    public static WindowData prevWindow;
+    private List<SensorData> currentSensorList = new ArrayList<>();
+    private List<SensorData> nextSensorList = new ArrayList<>();
 
-    public void insertAccelerometerEventIntoWindow(
-            AccelerometerData anAccelerometerEvent) {
+    public void insertSensorEventIntoWindow(
+            SensorData aSensorEvent) {
 
-        currentAccelerometerList.add(anAccelerometerEvent);
+        currentSensorList.add(aSensorEvent);
 
         // Numbers of overlapping values in integers
         int overlap = CoreService.windowOverlap;
 
         // Adds accelerometer data if it is needed for the next sliding window
-        if (overlap < currentAccelerometerList.size()) {
-            nextAccelerometerList.add(anAccelerometerEvent);
+        if (overlap < currentSensorList.size()) {
+            nextSensorList.add(aSensorEvent);
         }
 
         // Convert current accelerometer data segments into a window
-        if (currentAccelerometerList.size() == CoreService.windowSize) {
+        if (currentSensorList.size() == CoreService.windowSize) {
 
             // Process window and add it to ring buffer
-            processWindow(currentAccelerometerList);
+            processWindow(currentSensorList);
 
             // Ensures that the accelerometer data needed for next window is stored
-            currentAccelerometerList.addAll(nextAccelerometerList);
-            nextAccelerometerList.clear();
+            currentSensorList.addAll(nextSensorList);
+            nextSensorList.clear();
         }
     }
 
-    private void processWindow(List<AccelerometerData> rawAccelerometerData) {
+    private void processWindow(List<SensorData> rawSensorData) {
 
         // Method to build a window based on the current accelerometer data and
-        WindowData window = buildWindow(rawAccelerometerData, prevWindow);
+        WindowData window = buildWindow(rawSensorData);
 
         // If the windows magnitude accelerometer rate is below threshold, don't use data
         if (window.getAccelerationMag() > CoreService.activityThreshold) {
@@ -59,27 +58,16 @@ public class WindowProcess {
             }
         }
         CoreService.isMoving = false;
-        prevWindow = window;
-        currentAccelerometerList.clear();
+        currentSensorList.clear();
     }
 
-    public WindowData buildWindow(List<AccelerometerData> rawAccelerometerData, WindowData prevWindow) {
+    public WindowData buildWindow(List<SensorData> rawSensorData) {
         float meanAccX, meanAccY, meanOri, meanMag;
         float sumAccX = 0, sumAccY = 0, sumOri = 0, sumMag = 0;
-        double speedX, speedY, time_current, time_prev;
-        double speedX_prev = 0, speedY_prev = 0;
-
-        // Ensures that if the previous window is null, the speed is not set
-        if (prevWindow != null) {
-            speedX_prev = prevWindow.getSpeedX();
-            speedY_prev = prevWindow.getSpeedY();
-            time_prev = prevWindow.getTime();
-        } else {
-            time_prev = 0;
-        }
+        double time_current;
 
         // Finds the sum of accelerometer x and y, the orientation and the magnitude of accelerometer
-        for (AccelerometerData acc : rawAccelerometerData) {
+        for (SensorData acc : rawSensorData) {
             sumAccX += acc.getAccelerationX();
             sumAccY += acc.getAccelerationY();
             sumOri += acc.getOrientation();
@@ -89,29 +77,15 @@ public class WindowProcess {
         }
 
         // Find the means of the values
-        meanAccX = sumAccX / rawAccelerometerData.size();
-        meanAccY = sumAccY / rawAccelerometerData.size();
-        meanOri = sumOri / rawAccelerometerData.size();
-        meanMag = sumMag / rawAccelerometerData.size();
+        meanAccX = sumAccX / rawSensorData.size();
+        meanAccY = sumAccY / rawSensorData.size();
+        meanOri = sumOri / rawSensorData.size();
+        meanMag = sumMag / rawSensorData.size();
 
         time_current = System.currentTimeMillis() * Math.pow(10, -3);
 
-        // If the previous speed is 0 m/s, the device has not moved before
-        // and the time factor between current and next is not possible
-        if (speedX_prev ==  0 && speedY_prev == 0) {
-            speedX = speedX_prev + meanAccX;
-            speedY = speedY_prev + meanAccY;
-        } else {
-            speedX = speedX_prev + meanAccX * Math.pow(time_current - time_prev, 2);
-            speedY = speedY_prev + meanAccY * Math.pow(time_current - time_prev, 2);
-        }
-
-        // Compute the velocity from the speed on the x and y axes
-        double velocity = Math.sqrt(Math.pow(speedX, 2) + Math.pow(speedY, 2));
-
         // Save the collected data into a window
         //-1 returned as id - does not require unlockid until put in database
-        return new WindowData(-1, speedX, speedY, meanOri,
-                velocity, meanMag, time_current);
+        return new WindowData(-1, meanAccX, meanAccY, meanOri, meanMag, time_current);
     }
 }

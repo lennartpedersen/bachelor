@@ -1,6 +1,6 @@
 package net.anders.autounlock;
 
-public class AccelerometerData {
+public class SensorData {
     float accelerationX;
     float accelerationY;
     float accelerationZ;
@@ -8,7 +8,7 @@ public class AccelerometerData {
     float orientation;
 
 
-    public AccelerometerData(float accelerationX, float accelerationY, float accelerationZ, long time, float orientation) {
+    public SensorData(float accelerationX, float accelerationY, float accelerationZ, long time, float orientation) {
         this.accelerationX = accelerationX;
         this.accelerationY = accelerationY;
         this.accelerationZ = accelerationZ;
@@ -54,7 +54,7 @@ public class AccelerometerData {
 
     @Override
     public String toString() {
-        return "AccelerometerData{" +
+        return "SensorData{" +
                 "accelerationX=" + accelerationX +
                 ", accelerationY=" + accelerationY +
                 ", accelerationZ=" + accelerationZ +

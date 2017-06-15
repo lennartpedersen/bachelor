@@ -89,6 +89,8 @@ public class CoreService extends Service implements
     // Binder given to clients
     private final IBinder localBinder = new LocalBinder();
 
+
+
     // Class used for the client Binder.  Because we know this service always
     // runs in the same process as its clients, we don't need to deal with IPC.
 
@@ -147,7 +149,7 @@ public class CoreService extends Service implements
         dataStore = new DataStore(this);
         geofence = new Geofence();
 
-        accelerometerIntent = new Intent(this, AccelerometerService.class);
+        accelerometerIntent = new Intent(this, SensorService.class);
         locationIntent = new Intent(this, LocationService.class);
         bluetoothIntent = new Intent(this, BluetoothService.class);
         scannerIntent = new Intent(this, ScannerService.class);
@@ -168,8 +170,8 @@ public class CoreService extends Service implements
         registerReceiver(startPatternRecognitionReceiver, startPatternRecognitionFilter);
 
         /*  MACHINE LEARNING VALUES */
-        CoreService.windowBufferSize = 100;
-        CoreService.windowSize = 50;
+        CoreService.windowBufferSize = 50;
+        CoreService.windowSize = 25;
         CoreService.windowPercentageOverlap = .2;
         CoreService.windowOverlap =  CoreService.windowSize - ((int)(CoreService.windowSize *  CoreService.windowPercentageOverlap));
         CoreService.reqUnlockTraining = 5;
@@ -377,7 +379,7 @@ public class CoreService extends Service implements
 
 
     void startAccelerometerService() {
-        Log.v(TAG, "Starting AccelerometerService");
+        Log.v(TAG, "Starting SensorService");
         Thread accelerometerServiceThread = new Thread() {
             public void run() {
                 startService(accelerometerIntent);
@@ -432,7 +434,6 @@ public class CoreService extends Service implements
 
     void stopPatternRecognitionService() {
         isPatternRecognitionRunning = false;
-        WindowProcess.prevWindow = null;
         Log.d("CoreService", "Trying to stop PatternRecognitionService");
         stopService(patternRecognitionIntent);
     }
@@ -573,12 +574,13 @@ public class CoreService extends Service implements
     }
 
     // Method to insert unlock session and evaluate if calibration is complete
-    void handleUnlock() {
+    public static void handleUnlock() {
         // Take snapshot of the currently sequential data
         WindowData[] snapshot = RingBuffer.getSnapshot();
 
         // Insert the sequential data into the database
         dataStore.insertWindows(snapshot);
+        dataStore.insertUnlockValue(1);
 
         int cntUnlock = dataStore.getUnlockCount();
 
@@ -595,37 +597,42 @@ public class CoreService extends Service implements
         }
     }
 
+    public static void handleNotUnlock() {
+        WindowData[] snapshot = RingBuffer.getSnapshot();
+        dataStore.insertWindows(snapshot);
+        dataStore.insertUnlockValue(0);
+    }
+
     // Initiate training of the HMM
-    public void trainModel(WindowData[] snapshot){
+    public static void trainModel(WindowData[] snapshot){
 
         try {
             RecurrentNN.trainNetwork(snapshot);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void toooast() {
-        //double d = RecogniseSequence.getProbability();
-        String s = "";
+        double d = RecogniseSequence.getProbability();
+        /*String s = "";
         for (Double[] d : RecogniseSequence.getSequence()) {
             for (Double dd : d) {
                 s+=dd + " ";
             }
-        }
-        Toast.makeText(getApplicationContext(), s, Toast.LENGTH_SHORT).show();
+        }*/
+        Toast.makeText(getApplicationContext(), ""+ d, Toast.LENGTH_SHORT).show();
     }
 
-    public static void accelerometerEvent(AccelerometerData anAccelerometerEvent) {
-        windowProcess.insertAccelerometerEventIntoWindow(anAccelerometerEvent);
+    public static void accelerometerEvent(SensorData anAccelerometerEvent) {
+        windowProcess.insertSensorEventIntoWindow(anAccelerometerEvent);
     }
 
     // Method to export the database
     void exportDB() {
-        Export.Database();
-        Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
-        //toooast();
+        //Export.Database();
+        //Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
+        toooast();
         //NotificationUtility notification = new NotificationUtility();
         //notification.displayUnlockNotification(getApplicationContext(),1);
 
@@ -634,6 +641,10 @@ public class CoreService extends Service implements
     // Method to get a list of unlocks sessions
     public static ArrayList<ArrayList<WindowData>> getUnlocks() {
         return dataStore.getUnlocks();
+    }
+
+    public static int getUnlockValue(int id) {
+        return dataStore.getUnlockValue(id);
     }
 
 }

@@ -11,8 +11,8 @@ import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
 
-public class AccelerometerService extends Service implements SensorEventListener {
-    static String TAG = "AccelerometerService";
+public class SensorService extends Service implements SensorEventListener {
+    static String TAG = "SensorService";
     private static final boolean ADAPTIVE_ACCELEROMETER_FILTER = true;
 
     int startMode;       // indicates how to behave if the service is killed
@@ -136,11 +136,12 @@ public class AccelerometerService extends Service implements SensorEventListener
         // earth coordinates.
         android.opengl.Matrix.multiplyMV(rotatedLinearAcceleration, 0, rotationMatrixInverted, 0, linearAcceleration, 0);
 
-        AccelerometerData anAccelerometerEvent = new AccelerometerData (
+        SensorData anAccelerometerEvent = new SensorData(
                 linearAcceleration[0],
                 linearAcceleration[1],
                 linearAcceleration[2],
                 System.currentTimeMillis(),
+                //timestamp,
                 CoreService.currentOrientation);
 
         CoreService.accelerometerEvent(anAccelerometerEvent);
@@ -150,7 +151,7 @@ public class AccelerometerService extends Service implements SensorEventListener
     public void onCreate() {
         // The service is being created
         powerManager = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AccelerometerService");
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SensorService");
         wakeLock.acquire();
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -189,7 +190,7 @@ public class AccelerometerService extends Service implements SensorEventListener
     @Override
     public void onDestroy() {
         // The service is no longer used and is being destroyed
-        Log.v("AccelerometerService", "Stopping");
+        Log.v("SensorService", "Stopping");
         sensorManager.unregisterListener(this, gravitySensor);
         sensorManager.unregisterListener(this, magneticFieldSensor);
         sensorManager.unregisterListener(this, linearAccelerationSensor);
