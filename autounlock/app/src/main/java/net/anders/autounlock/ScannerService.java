@@ -45,9 +45,9 @@ public class ScannerService extends Service {
             CoreService.isScanningForLocks = true;
             List<String> foundLocks = new ArrayList<String>();
             ArrayList<String> decisionLocks = new ArrayList<String>();
-
+            List<BluetoothData> bluetoothDatas = new ArrayList<>(CoreService.recordedBluetooth);
             while (running) {
-                for (BluetoothData bluetoothData : CoreService.recordedBluetooth) {
+                for (BluetoothData bluetoothData : bluetoothDatas) {
                     if (CoreService.activeInnerGeofences.contains(bluetoothData.getSource())) {
                         foundLocks.add(bluetoothData.getSource());
                     }
@@ -59,10 +59,10 @@ public class ScannerService extends Service {
                             !CoreService.RNN.isEmpty() &&
                             CoreService.trainingComplete)
                     {
-                        //if (CoreService.environmentApproved(foundLocks.get(0).toString())) {
+                        if (CoreService.environmentApproved(foundLocks.get(0).toString())) {
                             Intent startDecision = new Intent("START_PATTERNRECOGNITION");
                             sendBroadcast(startDecision);
-                        //}
+                        }
                     }
 
                 }

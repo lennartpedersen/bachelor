@@ -75,7 +75,6 @@ public class PatternRecognitionService extends Service {
                             // stop the recognition
                             Intent startDecision = new Intent("STOP_PATTERNRECOGNITION");
                             sendBroadcast(startDecision);
-//
                             sendBroadcast(stopRecognise);
                             running = false;
                             stopSelf();

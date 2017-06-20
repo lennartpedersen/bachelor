@@ -74,9 +74,9 @@ public class RecogniseSequence {
 
 
     // Evaluation problem - Forward-Backward Calculator
-    public void getProbability(Double[][] sequence){
+    public static void getProbability(Double[][] sequence){
         try {
-            probability = RecurrentNN.getProbability(sequence);
+            probability = RecurrentNN2.getProbability(sequence);
         } catch (Exception e) {
             e.printStackTrace();
         }

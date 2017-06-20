@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.*;
 import android.os.Process;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
@@ -26,9 +27,11 @@ import net.anders.autounlock.MachineLearning.DatabaseRetriever;
 import net.anders.autounlock.MachineLearning.PatternRecognitionService;
 import net.anders.autounlock.MachineLearning.RecogniseSequence;
 import net.anders.autounlock.MachineLearning.RecurrentNN;
+import net.anders.autounlock.MachineLearning.RecurrentNN2;
 import net.anders.autounlock.MachineLearning.WindowProcess;
 import net.anders.autounlock.MachineLearning.WindowData;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +59,7 @@ public class CoreService extends Service implements
 
     static List<BluetoothData> recordedBluetooth = new ArrayList<BluetoothData>();
     static List<LocationData> recordedLocation = new ArrayList<LocationData>();
+    static List<WifiData> recordedWifi = new ArrayList<WifiData>();
     static volatile ArrayList<String> activeInnerGeofences = new ArrayList<>();
     static ArrayList<String> activeOuterGeofences = new ArrayList<>();
     static WindowProcess windowProcess = new WindowProcess();
@@ -89,6 +93,9 @@ public class CoreService extends Service implements
     // Binder given to clients
     private final IBinder localBinder = new LocalBinder();
 
+    static boolean environmentApproved(String foundLock) {
+        return Environment.makeDecision(foundLock);
+    }
 
 
     // Class used for the client Binder.  Because we know this service always
@@ -151,6 +158,7 @@ public class CoreService extends Service implements
 
         accelerometerIntent = new Intent(this, SensorService.class);
         locationIntent = new Intent(this, LocationService.class);
+        wifiIntent = new Intent(this, WifiService.class);
         bluetoothIntent = new Intent(this, BluetoothService.class);
         scannerIntent = new Intent(this, ScannerService.class);
         patternRecognitionIntent = new Intent(this, PatternRecognitionService.class);
@@ -170,7 +178,7 @@ public class CoreService extends Service implements
         registerReceiver(startPatternRecognitionReceiver, startPatternRecognitionFilter);
 
         /*  MACHINE LEARNING VALUES */
-        CoreService.windowBufferSize = 50;
+        CoreService.windowBufferSize = 100;
         CoreService.windowSize = 25;
         CoreService.windowPercentageOverlap = .2;
         CoreService.windowOverlap =  CoreService.windowSize - ((int)(CoreService.windowSize *  CoreService.windowPercentageOverlap));
@@ -189,7 +197,7 @@ public class CoreService extends Service implements
             // Get old correct unlocks from DB.
             try {
                 DatabaseRetriever.readOldData();
-                RecurrentNN.startTraining();
+                RecurrentNN2.startTraining();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -275,6 +283,7 @@ public class CoreService extends Service implements
             if ("GEOFENCES_ENTERED".equals(action)) {
                 for (String geofence : triggeringGeofencesList) {
                     if (geofence.contains("inner")) {
+                        geoToast("Entered inner geofence");
                         Log.i(TAG, "Entered inner geofence");
                         activeInnerGeofences.add(geofence.substring(5));
                         if (!isDetailedDataCollectionStarted) {
@@ -284,6 +293,7 @@ public class CoreService extends Service implements
 
                             startAccelerometerService();
                             startBluetoothService();
+                            startWifiService();
                             scanForLocks();
 
                             MainActivity.lockDoor.setVisibility(View.VISIBLE);
@@ -291,6 +301,7 @@ public class CoreService extends Service implements
                             MainActivity.lockView.setVisibility(View.GONE);
                         }
                     } else if (geofence.contains("outer")) {
+                        geoToast("Entered outer geofence");
                         Log.i(TAG, "Entered outer geofence");
                         activeOuterGeofences.add(geofence.substring(5));
                         newRingBuffer();
@@ -303,6 +314,7 @@ public class CoreService extends Service implements
             } else if ("GEOFENCES_EXITED".equals(action)) {
                 for (String geofence : triggeringGeofencesList) {
                     if (geofence.contains("inner")) {
+                        geoToast("Exited inner geofence");
                         Log.i(TAG, "Exited inner geofence");
                         if (isDetailedDataCollectionStarted && activeInnerGeofences.isEmpty()) {
                             isDetailedDataCollectionStarted = false;
@@ -310,6 +322,7 @@ public class CoreService extends Service implements
 
                             stopAccelerometerService();
                             stopBluetoothService();
+                            stopWifiService();
                             stopPatternRecognitionService();
 
                             MainActivity.lockDoor.setVisibility(View.GONE);
@@ -317,6 +330,7 @@ public class CoreService extends Service implements
                             MainActivity.lockView.setVisibility(View.VISIBLE);
                         }
                     } else if (geofence.contains("outer")) {
+                        geoToast("Exited outer geofence");
                         Log.i(TAG, "Entered outer geofence");
 
                         if (isLocationDataCollectionStarted && activeOuterGeofences.isEmpty()) {
@@ -359,6 +373,7 @@ public class CoreService extends Service implements
                 startAccelerometerService();
                 startBluetoothService();
                 startLocationService();
+                startWifiService();
                 startPatternRecognitionService();
                 isDetailedDataCollectionStarted = true;
                 isLocationDataCollectionStarted = true;
@@ -369,6 +384,7 @@ public class CoreService extends Service implements
                 stopAccelerometerService();
                 stopBluetoothService();
                 stopLocationService();
+                stopWifiService();
                 stopPatternRecognitionService();
                 isScanningForLocks = false;
                 isDetailedDataCollectionStarted = false;
@@ -405,6 +421,20 @@ public class CoreService extends Service implements
 
     void stopLocationService() {
         stopService(locationIntent);
+    }
+
+    void startWifiService() {
+        Log.v(TAG, "Starting WifiService");
+        Thread wifiServiceThread = new Thread() {
+            public void run() {
+                startService(wifiIntent);
+            }
+        };
+        wifiServiceThread.start();
+    }
+
+    void stopWifiService() {
+        stopService(wifiIntent);
     }
 
     void startBluetoothService() {
@@ -469,6 +499,7 @@ public class CoreService extends Service implements
                 String passphrase = "";
 
                 startBluetoothService();
+                startWifiService();
                 startLocationService();
 
                 try {
@@ -478,6 +509,7 @@ public class CoreService extends Service implements
                 }
 
                 stopBluetoothService();
+                stopWifiService();
                 stopLocationService();
 
                 if (success && recordedLocation.size() != 0) {
@@ -490,7 +522,8 @@ public class CoreService extends Service implements
                             30,
                             100,
                             -1f,
-                            recordedBluetooth
+                            recordedBluetooth,
+                            recordedWifi
                     );
                     Log.d(TAG, lockData.toString());
                     newLock(lockData);
@@ -522,6 +555,16 @@ public class CoreService extends Service implements
                     lockData.getNearbyBluetoothDevices().get(i).getRssi(),
                     lockData.getMAC(),
                     lockData.getNearbyBluetoothDevices().get(i).getTime()
+            );
+        }
+
+        for (int i = 0; i < lockData.getNearbyWifiAccessPoints().size(); i++) {
+            dataStore.insertWifi(
+                    lockData.getNearbyWifiAccessPoints().get(i).getSsid(),
+                    lockData.getNearbyWifiAccessPoints().get(i).getMac(),
+                    lockData.getNearbyWifiAccessPoints().get(i).getRssi(),
+                    lockData.getMAC(),
+                    lockData.getNearbyWifiAccessPoints().get(i).getTime()
             );
         }
 
@@ -578,6 +621,7 @@ public class CoreService extends Service implements
         // Take snapshot of the currently sequential data
         WindowData[] snapshot = RingBuffer.getSnapshot();
 
+
         // Insert the sequential data into the database
         dataStore.insertWindows(snapshot);
         dataStore.insertUnlockValue(1);
@@ -598,7 +642,7 @@ public class CoreService extends Service implements
     }
 
     public static void handleNotUnlock() {
-        WindowData[] snapshot = RingBuffer.getSnapshot();
+        WindowData[] snapshot = windowBuffer.getSnapshot();
         dataStore.insertWindows(snapshot);
         dataStore.insertUnlockValue(0);
     }
@@ -607,10 +651,15 @@ public class CoreService extends Service implements
     public static void trainModel(WindowData[] snapshot){
 
         try {
-            RecurrentNN.trainNetwork(snapshot);
+            DatabaseRetriever.readOldData();
+            RecurrentNN2.trainNetwork(snapshot);
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void geoToast(String text) {
+        Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
     }
 
     public void toooast() {
@@ -630,9 +679,9 @@ public class CoreService extends Service implements
 
     // Method to export the database
     void exportDB() {
-        //Export.Database();
-        //Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
-        toooast();
+        Export.Database();
+        Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
+        //toooast();
         //NotificationUtility notification = new NotificationUtility();
         //notification.displayUnlockNotification(getApplicationContext(),1);
 
@@ -647,4 +696,8 @@ public class CoreService extends Service implements
         return dataStore.getUnlockValue(id);
     }
 
+
+
 }
+
+

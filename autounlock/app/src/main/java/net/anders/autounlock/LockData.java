@@ -11,6 +11,7 @@ class LockData {
     private float outerGeofence;
     private float orientation;
     private List<BluetoothData> nearbyBluetoothDevices;
+    private List<WifiData> nearbyWifiAccessPoints;
 
 
     LockData(String MAC) {
@@ -41,6 +42,18 @@ class LockData {
         this.outerGeofence = outerGeofence;
         this.orientation = orientation;
         this.nearbyBluetoothDevices = nearbyBluetoothDevices;
+    }
+
+    public LockData(String lockMac, String lockPassphrase, LocationData locationData, float innerGeofence, float outerGeofence, float orientation, List<BluetoothData> nearbyBluetoothDevices, List<WifiData> nearbyWifiAccessPoints) {
+
+        this.MAC = lockMac;
+        this.passphrase = lockPassphrase;
+        this.location = locationData;
+        this.innerGeofence = innerGeofence;
+        this.outerGeofence = outerGeofence;
+        this.orientation = orientation;
+        this.nearbyBluetoothDevices = nearbyBluetoothDevices;
+        this.nearbyWifiAccessPoints = nearbyWifiAccessPoints;
     }
 
     public String getMAC() {
@@ -109,6 +122,10 @@ class LockData {
                 ", outerGeofence=" + outerGeofence +
                 ", nearbyBluetoothDevices=" + nearbyBluetoothDevices +
                 '}';
+    }
+
+    public List<WifiData> getNearbyWifiAccessPoints() {
+        return nearbyWifiAccessPoints;
     }
 }
 
