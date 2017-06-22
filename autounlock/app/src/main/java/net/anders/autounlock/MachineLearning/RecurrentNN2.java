@@ -85,13 +85,6 @@ public class RecurrentNN2 {
     }
 
     private static void constructNetwork() throws Exception {
-/*
-        DenseLayer inputLayer = new DenseLayer.Builder()
-                .nIn(NUM_SAMPLES)
-                .nOut(NEURONS)
-                .name("Input")
-                .build();*/
-
 
         GravesLSTM hiddenLayer = new GravesLSTM.Builder()
                 .activation(Activation.TANH)
@@ -114,7 +107,6 @@ public class RecurrentNN2 {
                 .learningRate(0.01);
 
         NeuralNetConfiguration.ListBuilder listBuilder = nncBuilder.list();
-        //listBuilder.layer(0, inputLayer);
         listBuilder.layer(0, hiddenLayer);
         listBuilder.layer(1, outputLayer);
 
@@ -136,7 +128,7 @@ public class RecurrentNN2 {
         if (unlockSize < 1) return;
 
         //Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
-        CSVMaker.convertToCSV(trainData, "1");
+        CSVMaker.convertToCSV(trainData);
 
         miniBatchSize = unlockSize;
 
@@ -183,14 +175,11 @@ public class RecurrentNN2 {
         int unlockSize = trainData.size();
         if (unlockSize < 1) return;
 
-        //Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
-        CSVMaker.convertToCSV(trainData, "1");
-
         miniBatchSize = unlockSize;
 
         Double[][] trainArray = createSequenceData(snapshot);
 
-        CSVMaker.convertSingleArrayToCSV(trainArray, "1");
+        CSVMaker.convertSingleArrayToCSV(trainArray, unlockSize+1);
 
         SequenceRecordReader trainFeatures = new CSVSequenceRecordReader();
         trainFeatures.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/features/%d.csv", 1, unlockSize-1));
@@ -217,20 +206,23 @@ public class RecurrentNN2 {
      * See: https://deeplearning4j.org/usingrnns
      */
     public static double getProbability(Double[][] sequence) throws Exception {
+        //myNetwork will be null the first time getProbability is invoked.
         if(myNetwork == null) {
             startTraining();
         }
-        CSVMaker.convertSingleArrayToCSV(sequence, "1");
+
 
         File file = new File(CSVMaker.outputPath + "/train/features");
         int fileNumber = file.listFiles().length;
 
+        //CSVMaker.convertSingleArrayToCSV(sequence, fileNumber+1);
+        CSVMaker.convertToTempCSVProbArray(sequence,"1");
         // ----- Load the test data -----
         //Same process as for the training data.
         SequenceRecordReader testFeatures = new CSVSequenceRecordReader();
-        testFeatures.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/features/%d.csv", fileNumber, fileNumber));
+        testFeatures.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/features/%d.csv", fileNumber+1, fileNumber+1));
         SequenceRecordReader testLabels = new CSVSequenceRecordReader();
-        testLabels.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/labels/%d.csv", fileNumber, fileNumber));
+        testLabels.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/labels/%d.csv", fileNumber+1, fileNumber+1));
 
         DataSetIterator testData = new SequenceRecordReaderDataSetIterator(testFeatures, testLabels, miniBatchSize, numLabelClasses,
                 false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
@@ -260,10 +252,22 @@ public class RecurrentNN2 {
             //System.out.println(String.format(str, i, evaluation.accuracy(), evaluation.f1()));
             //System.out.println(evaluation.stats());
 
-            testData.reset();
+        }
+
+        if (prob < 0.5) {
+            deleteTempFile(fileNumber+1);
         }
 
         return prob;
+    }
+
+    private static void deleteTempFile(int fileNumber) {
+        String path = "file:" + CSVMaker.outputPath + String.format("train/features/%d.csv", fileNumber);
+        File file = new File(path);
+        file.delete();
+        String path2 = "file:" + CSVMaker.outputPath + String.format("train/labels/%d.csv", fileNumber);
+        File file2 = new File(path2);
+        file2.delete();
     }
 
     /*

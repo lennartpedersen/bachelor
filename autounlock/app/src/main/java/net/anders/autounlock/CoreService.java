@@ -364,6 +364,7 @@ public class CoreService extends Service implements
                 isDetailedDataCollectionStarted = true;
                 isLocationDataCollectionStarted = true;
 
+
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e) {
@@ -605,6 +606,7 @@ public class CoreService extends Service implements
         if (dataStore.getKnownLocks().isEmpty()) {
             saveLock(BluetoothService.ANDERS_BEKEY);
         }
+        handleNotUnlock();
         lockNow();
     }
 
@@ -642,12 +644,12 @@ public class CoreService extends Service implements
     }
 
     public static void handleNotUnlock() {
-        WindowData[] snapshot = windowBuffer.getSnapshot();
+        WindowData[] snapshot = RingBuffer.getSnapshot();
         dataStore.insertWindows(snapshot);
         dataStore.insertUnlockValue(0);
     }
 
-    // Initiate training of the HMM
+    // Initiate training of the RNN
     public static void trainModel(WindowData[] snapshot){
 
         try {
@@ -663,14 +665,16 @@ public class CoreService extends Service implements
     }
 
     public void toooast() {
-        double d = RecogniseSequence.getProbability();
+        //double d = RecogniseSequence.getProbability();
         /*String s = "";
         for (Double[] d : RecogniseSequence.getSequence()) {
             for (Double dd : d) {
                 s+=dd + " ";
             }
         }*/
-        Toast.makeText(getApplicationContext(), ""+ d, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(), ""+ d, Toast.LENGTH_SHORT).show();
+        NotificationUtility notification = new NotificationUtility();
+        notification.displayUnlockNotification(getApplicationContext());
     }
 
     public static void accelerometerEvent(SensorData anAccelerometerEvent) {
@@ -679,9 +683,9 @@ public class CoreService extends Service implements
 
     // Method to export the database
     void exportDB() {
-        Export.Database();
-        Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
-        //toooast();
+        //Export.Database();
+        //Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
+        toooast();
         //NotificationUtility notification = new NotificationUtility();
         //notification.displayUnlockNotification(getApplicationContext(),1);
 

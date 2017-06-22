@@ -71,7 +71,7 @@ public class PatternRecognitionService extends Service {
                         // Initiate recognition procedure of the snapshot
                         if (recognise.recognise(getApplicationContext(), snapshot)) {
 
-                            // If the sequential data was recognised as correcet,
+                            // If the sequential data was recognised as correct,
                             // stop the recognition
                             Intent startDecision = new Intent("STOP_PATTERNRECOGNITION");
                             sendBroadcast(startDecision);

@@ -29,31 +29,37 @@ class CSVMaker {
     private static ArrayList<Double> orientation = new ArrayList<>();
     public static String outputPath = Environment.getExternalStorageDirectory() + "/AutoUnlock/Csv"; // Ændres til temp folder på device
 
-    public static void convertToCSV(Map<Integer, Double[][]> trainData, String kClass) throws Exception {
+    public static void convertToCSV(Map<Integer, Double[][]> trainData) throws Exception {
         String outputPath_F = outputPath + "/train/features";
         String outputPath_L = outputPath + "/train/labels";
 
         for (int i = 0; i < trainData.keySet().size(); i++) {
             Double[][] trainList = trainData.get(i);
-
-            for (int j = 0; j < trainList[0].length; j++) {
-                orientation.add(trainList[0][j]);
-                acc_x.add(trainList[1][j]);
-                acc_y.add(trainList[2][j]);
-            }
-            // Write the feature file
-            writeFile(outputPath_F+"/"+(getNumber(outputPath_F)+1)+".csv");
-            // Write the label file
-            writeFileLabel(outputPath_L+"/"+(getNumber(outputPath_L)+1)+".csv", kClass);
-
-            acc_x = new ArrayList<>();
-            acc_y = new ArrayList<>();
-            orientation = new ArrayList<>();
+            convertSingleArrayToCSV(trainList, i+1);
         }
 
     }
 
-    public static void convertSingleArrayToCSV(Double[][] sequence, String kClass) throws Exception {
+    public static void convertSingleArrayToCSV(Double[][] sequence, int unlockID) throws Exception {
+        String outputPath_F = outputPath + "/train/features";
+        String outputPath_L = outputPath + "/train/labels";
+
+        for (int j = 0; j < sequence[0].length; j++) {
+            orientation.add(sequence[0][j]);
+            acc_x.add(sequence[1][j]);
+            acc_y.add(sequence[2][j]);
+        }
+        // Write the feature file
+        writeFile(outputPath_F+"/"+(getNumber(outputPath_F)+1)+".csv");
+        // Write the label file
+        writeFileLabel(outputPath_L+"/"+(getNumber(outputPath_L)+1)+".csv", ""+DatabaseRetriever.getUnlockValue(unlockID));
+
+        acc_x = new ArrayList<>();
+        acc_y = new ArrayList<>();
+        orientation = new ArrayList<>();
+    }
+
+    public static void convertToTempCSVProbArray(Double[][] sequence, String kClass) throws Exception {
         String outputPath_F = outputPath + "/train/features";
         String outputPath_L = outputPath + "/train/labels";
 
@@ -71,6 +77,7 @@ class CSVMaker {
         acc_y = new ArrayList<>();
         orientation = new ArrayList<>();
     }
+
 /*
     private static void convertToCSV(String path, String nline, boolean skip, String type, String kClass) throws Exception {
         String outputPath_F = "/Users/tom-fire/Desktop/uitest/"+type+"/features";
@@ -145,20 +152,8 @@ class CSVMaker {
 
     private static int getNumber(String path) {
         File folder = new File(path);
+        return folder.listFiles().length;
 
-        int max = 0;
-        for (final File fileEntry : folder.listFiles()) {
-            try {
-                int num = Integer.parseInt(fileEntry.getName().replace(".csv", ""));
-                if (num > max) {
-                    max = num;
-                }
-            } catch (Exception e) {
-                continue;
-            }
-        }
-
-        return max;
     }
 }
 
