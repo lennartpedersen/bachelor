@@ -8,10 +8,7 @@ public class WindowData {
     int id;
     double accelerationX;
     double accelerationY;
-    double speedX;
-    double speedY;
     double orientation;
-    double velocity;
     double accelerationMag;
     double time;
 

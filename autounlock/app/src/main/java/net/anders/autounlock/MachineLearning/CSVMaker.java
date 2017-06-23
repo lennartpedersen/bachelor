@@ -19,20 +19,12 @@ import java.util.concurrent.ExecutionException;
  * Created by TSN on 11-06-2017.
  */
 class CSVMaker {
-    private static int K_UNLOCK         = 1;
-    private static int K_ACCELERATION_X = 2;
-    private static int K_ACCELERATION_Y = 3;
-    private static int K_ORIENTATION    = 4;
-
     private static ArrayList<Double> acc_x = new ArrayList<>();
     private static ArrayList<Double> acc_y = new ArrayList<>();
     private static ArrayList<Double> orientation = new ArrayList<>();
-    public static String outputPath = Environment.getExternalStorageDirectory() + "/AutoUnlock/Csv"; // Ændres til temp folder på device
+    public static String outputPath = Environment.getExternalStorageDirectory() + "/AutoUnlock/Csv";
 
     public static void convertToCSV(Map<Integer, Double[][]> trainData) throws Exception {
-        String outputPath_F = outputPath + "/train/features";
-        String outputPath_L = outputPath + "/train/labels";
-
         for (int i = 0; i < trainData.keySet().size(); i++) {
             Double[][] trainList = trainData.get(i);
             convertSingleArrayToCSV(trainList, i+1);
@@ -78,54 +70,6 @@ class CSVMaker {
         orientation = new ArrayList<>();
     }
 
-/*
-    private static void convertToCSV(String path, String nline, boolean skip, String type, String kClass) throws Exception {
-        String outputPath_F = "/Users/tom-fire/Desktop/uitest/"+type+"/features";
-        String outputPath_L = "/Users/tom-fire/Desktop/uitest/"+type+"/labels";
-
-        InputStream is = new FileInputStream(new File(path));
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        if (skip) {
-            reader.readLine(); // To get rid of attribute titles
-        }
-
-        try {
-            String line;
-            String lastUnlockID = nline;
-            while((line=reader.readLine()) != null) {
-                String[] RowData = line.split(",");
-                String newUnlockID = RowData[K_UNLOCK];
-
-                if (lastUnlockID.equals(newUnlockID)) {
-                    acc_x.add(Double.parseDouble(RowData[K_ACCELERATION_X]));
-                    acc_y.add(Double.parseDouble(RowData[K_ACCELERATION_Y]));
-                    orientation.add(Double.parseDouble(RowData[K_ORIENTATION]));
-                } else {
-                    writeFile(outputPath_F+"/"+(getNumber(outputPath_F)+1)+".csv");
-                    writeFileLabel(outputPath_L+"/"+(getNumber(outputPath_L)+1)+".csv", kClass);
-
-                    lastUnlockID = newUnlockID;
-                    acc_x = new ArrayList<>();
-                    acc_y = new ArrayList<>();
-                    orientation = new ArrayList<>();
-                }
-            }
-
-            if (orientation.size() > 1) {
-                writeFile(outputPath_F + "/" + (getNumber(outputPath_F) + 1) + ".csv");
-                writeFileLabel(outputPath_L + "/" + (getNumber(outputPath_L) + 1) + ".csv", kClass);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                is.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-*/
     private static void writeFile(String outputPath) throws Exception {
         FileWriter writer = new FileWriter(outputPath);
 
@@ -165,10 +109,6 @@ class CSVUtils {
         writeLine(w, values, DEFAULT_SEPARATOR, ' ');
     }
 
-    public static void writeLine(Writer w, List<String> values, char separators) throws IOException {
-        writeLine(w, values, separators, ' ');
-    }
-
     //https://tools.ietf.org/html/rfc4180
     private static String followCVSformat(String value) {
 
@@ -205,7 +145,6 @@ class CSVUtils {
         }
         sb.append("\n");
         w.append(sb.toString());
-
 
     }
 

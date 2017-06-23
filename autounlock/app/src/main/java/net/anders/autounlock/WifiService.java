@@ -55,7 +55,7 @@ public class WifiService extends Service {
         wakeLock = powerManager.newWakeLock(PowerManager.FULL_WAKE_LOCK, "WifiService");
         wakeLock.acquire();
 
-        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         registerReceiver(broadcastReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         wifiManager.createWifiLock(String.valueOf(WifiManager.WIFI_MODE_SCAN_ONLY)).acquire();
         wifiManager.startScan();

@@ -1,15 +1,17 @@
 package net.anders.autounlock.MachineLearning;
 
 /**
- * Created by tom-fire on 16/05/2017.
+ * Created by Lennart Pedersen on 16-06-2017.
  */
-
-import android.util.Log;
-import android.widget.Toast;
 
 import net.anders.autounlock.CoreService;
 
-import org.deeplearning4j.api.storage.StatsStorage;
+import org.apache.commons.io.FileUtils;
+import org.datavec.api.records.reader.SequenceRecordReader;
+import org.datavec.api.records.reader.impl.csv.CSVSequenceRecordReader;
+import net.anders.autounlock.MachineLearning.NumberedFileInputSplit;
+import org.deeplearning4j.datasets.datavec.SequenceRecordReaderDataSetIterator;
+import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.BackpropType;
 import org.deeplearning4j.nn.conf.GradientNormalization;
@@ -21,56 +23,52 @@ import org.deeplearning4j.nn.conf.layers.GravesLSTM;
 import org.deeplearning4j.nn.conf.layers.RnnOutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
-//import org.deeplearning4j.ui.api.UIServer;
-//import org.deeplearning4j.ui.stats.StatsListener;
-//import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.NormalizerStandardize;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 
-
-
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
 
 public class RecurrentNN {
-    private final static int NUM_SAMPLES = 25;
-    private final static int N_INPUT = 3;
+    private final static int NUM_SAMPLES = 3;
     private final static int N_OUTPUT = 2;
 
-    private static MultiLayerNetwork myNetwork;
+    private static DataNormalization normalizer;
 
-    /*public static void main(String args[]) throws Exception {
-        startTraining();
-        getProbability();
-    }*/
+    private static MultiLayerNetwork myNetwork;
+    private static int miniBatchSize, numLabelClasses = 2;
+
 
     public static void startTraining() throws Exception {
+        deleteOldRecords();
         constructNetwork();
     }
 
-    private static void constructNetwork() throws Exception {
-        /*
-        DenseLayer inputLayer = new DenseLayer.Builder()
-                .nIn(N_INPUT)
-                .nOut(3)
-                .name("Input")
-                .build();
-                */
+    private static void deleteOldRecords() throws IOException {
+        FileUtils.cleanDirectory(new File(CSVMaker.outputPath + "/train/features"));
+        FileUtils.cleanDirectory(new File(CSVMaker.outputPath + "/train/labels"));
+    }
 
-        GravesLSTM layer1 = new GravesLSTM.Builder()
+    private static void constructNetwork() throws Exception {
+
+        GravesLSTM hiddenLayer = new GravesLSTM.Builder()
                 .activation(Activation.TANH)
                 .nIn(NUM_SAMPLES)
-                .nOut(100)
+                .nOut(50)
                 .build();
 
         RnnOutputLayer outputLayer = new RnnOutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
                 .activation(Activation.SOFTMAX)
-                .nIn(100)
+                .nIn(50)
                 .nOut(N_OUTPUT)
                 .build();
 
@@ -79,17 +77,17 @@ public class RecurrentNN {
                 .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT).iterations(1)
                 .weightInit(WeightInit.XAVIER)
                 .updater(Updater.NESTEROVS).momentum(0.9)
-                .iterations(10000)
+                .iterations(1)
                 .learningRate(0.01);
 
         NeuralNetConfiguration.ListBuilder listBuilder = nncBuilder.list();
-        listBuilder.layer(0, layer1);
+        listBuilder.layer(0, hiddenLayer);
         listBuilder.layer(1, outputLayer);
 
-        //listBuilder.backprop(true);
-        listBuilder.backpropType(BackpropType.TruncatedBPTT) //Not necessary if timeseries are short.
-                .tBPTTForwardLength(20)  //Maximum length = length of time series
-                .tBPTTBackwardLength(20);
+        listBuilder.backprop(true);
+        listBuilder.backpropType(BackpropType.TruncatedBPTT)
+                .tBPTTForwardLength(25)
+                .tBPTTBackwardLength(25);
 
         myNetwork = new MultiLayerNetwork(listBuilder.build());
         myNetwork.init();
@@ -97,38 +95,33 @@ public class RecurrentNN {
         trainNetworkOnStart();
     }
 
-
     public static void trainNetworkOnStart() throws Exception {
         Map<Integer, Double[][]> trainData = CoreService.RNN;
-        //Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
 
-        for (int i = 0; i < trainData.keySet().size(); i++) {
-            System.out.println("Fitting " + (i + 1) + " of " + trainData.keySet().size());
+        int unlockSize = trainData.size();
+        if (unlockSize < 1) return;
 
-            Double[][] trainArray = trainData.get(i);
+        CSVMaker.convertToCSV(trainData);
 
-            INDArray trainingInputs = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
-            INDArray trainingOutputs = Nd4j.zeros(1, NUM_SAMPLES);
+        miniBatchSize = unlockSize;
 
-            for (int j = 0; j < NUM_SAMPLES; j++) {
-                trainingInputs.putScalar(new int[]{0,j}, trainArray[0][j]); //Orientation
-                trainingInputs.putScalar(new int[]{1,j}, trainArray[1][j]); //Acceleration X
-                trainingInputs.putScalar(new int[]{2,j}, trainArray[2][j]); //Acceleration Y
-            }
+        SequenceRecordReader trainFeatures = new CSVSequenceRecordReader();
+        trainFeatures.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/features/%d.csv", 1, unlockSize-1));
+        SequenceRecordReader trainLabels = new CSVSequenceRecordReader();
+        trainLabels.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/labels/%d.csv", 1, unlockSize-1));
 
-            for (int j = 0; j < NUM_SAMPLES-1; j++) {
-                trainingOutputs.putScalar(new int[]{0,j}, 0);
-            }
+        DataSetIterator trainIterator = new SequenceRecordReaderDataSetIterator(trainFeatures, trainLabels, miniBatchSize, numLabelClasses,
+                false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
 
-            trainingOutputs.putScalar(new int[]{0,NUM_SAMPLES-1}, DatabaseRetriever.getUnlockValue(i+1));
+        //Normalize the training data
+        normalizer = new NormalizerStandardize();
+        normalizer.fit(trainIterator);              //Collect training data statistics
+        trainIterator.reset();
 
+        //Use previously collected statistics to normalize on-the-fly. Each DataSet returned by 'trainData' iterator will be normalized
+        trainIterator.setPreProcessor(normalizer);
 
-            DataSet myData = new DataSet(trainingInputs, trainingOutputs);
-
-            myData.normalize();
-
-            myNetwork.fit(myData);
-        }
+        myNetwork.fit(trainIterator);
     }
 
     public static Double[][] createSequenceData(WindowData[] snapshot){
@@ -149,31 +142,35 @@ public class RecurrentNN {
         return sequence;
     }
 
-    public static void trainNetwork(WindowData[] snapshot) {
+    public static void trainNetwork(WindowData[] snapshot) throws Exception {
+        Map<Integer, Double[][]> trainData = CoreService.RNN;
+
+        int unlockSize = trainData.size();
+        if (unlockSize < 1) return;
+
+        miniBatchSize = unlockSize;
 
         Double[][] trainArray = createSequenceData(snapshot);
-        //System.out.println("Size: " + trainArray.length + ", " + trainArray[0].length);
 
-        INDArray trainingInputs = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
-        INDArray trainingOutputs = Nd4j.zeros(1, NUM_SAMPLES);
+        CSVMaker.convertSingleArrayToCSV(trainArray, unlockSize+1);
 
-        for (int j = 0; j < NUM_SAMPLES; j++) {
-            trainingInputs.putScalar(new int[]{0,j}, trainArray[0][j]); //Orientation
-            trainingInputs.putScalar(new int[]{1,j}, trainArray[1][j]); //Acceleration X
-            trainingInputs.putScalar(new int[]{2,j}, trainArray[2][j]); //Acceleration Y
-        }
+        SequenceRecordReader trainFeatures = new CSVSequenceRecordReader();
+        trainFeatures.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/features/%d.csv", 1, unlockSize-1));
+        SequenceRecordReader trainLabels = new CSVSequenceRecordReader();
+        trainLabels.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/labels/%d.csv", 1, unlockSize-1));
 
-        for (int i = 0; i < NUM_SAMPLES-1; i++) {
-            trainingOutputs.putScalar(new int[]{0,i}, 0);
-        }
+        DataSetIterator trainIterator = new SequenceRecordReaderDataSetIterator(trainFeatures, trainLabels, miniBatchSize, numLabelClasses,
+                false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
 
-        trainingOutputs.putScalar(new int[]{0,NUM_SAMPLES-1}, 1);
+        //Normalize the training data
+        normalizer = new NormalizerStandardize();
+        normalizer.fit(trainIterator);              //Collect training data statistics
+        trainIterator.reset();
 
-        //System.out.println("Shape = [" + trainingInputs.shape()[0] + "," + trainingInputs.shape()[1] + "]");
+        //Use previously collected statistics to normalize on-the-fly. Each DataSet returned by 'trainData' iterator will be normalized
+        trainIterator.setPreProcessor(normalizer);
 
-        DataSet myData = new DataSet(trainingInputs, trainingOutputs);
-
-        myNetwork.fit(myData);
+        myNetwork.fit(trainIterator);
     }
 
     /**
@@ -182,43 +179,55 @@ public class RecurrentNN {
      * See: https://deeplearning4j.org/usingrnns
      */
     public static double getProbability(Double[][] sequence) throws Exception {
-        //Map<Integer, Double[][]> trainData = DatabaseRetriever.getTupleDict();
-
-        /*for (Double[] dd: sequence
-                ) {
-            String row = "";
-            for (Double ddd: dd
-                    ) {
-                row += ddd + " ";
-            }
-            Log.v("sequenceinformation", row);
-        }*/
-
-
-
-        //Double[][] array = trainData.get(7);
-
-        //Double[][] sequence = DatabaseRetriever.readTestData();
-        if (sequence == null || sequence[0].length == 0) {
-            System.out.println("TestData is null or zero");
-            return 0;
+        //myNetwork will be null the first time getProbability is invoked.
+        if(myNetwork == null) {
+            startTraining();
         }
 
-        INDArray newData = Nd4j.zeros(N_INPUT, NUM_SAMPLES);
 
-        for (int i = 0; i < NUM_SAMPLES; i++) {
-            newData.putScalar(new int[]{0, i}, sequence[0][i]); //Orientation
-            newData.putScalar(new int[]{1, i}, sequence[1][i]); //Acceleration X
-            newData.putScalar(new int[]{2, i}, sequence[2][i]); //Acceleration Y
+        File file = new File(CSVMaker.outputPath + "/train/features");
+        int fileNumber = file.listFiles().length;
+
+        CSVMaker.convertToTempCSVProbArray(sequence,"1");
+        // ----- Load the test data -----
+        //Same process as for the training data.
+        SequenceRecordReader testFeatures = new CSVSequenceRecordReader();
+        testFeatures.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/features/%d.csv", fileNumber+1, fileNumber+1));
+        SequenceRecordReader testLabels = new CSVSequenceRecordReader();
+        testLabels.initialize(new NumberedFileInputSplit("file:" + CSVMaker.outputPath + "/train/labels/%d.csv", fileNumber+1, fileNumber+1));
+
+        DataSetIterator testData = new SequenceRecordReaderDataSetIterator(testFeatures, testLabels, miniBatchSize, numLabelClasses,
+                false, SequenceRecordReaderDataSetIterator.AlignmentMode.ALIGN_END);
+        if(normalizer != null) {
+            testData.setPreProcessor(normalizer);   //Note that we are using the exact same normalization process as for the training data
+        }
+        int nEpochs = 1;
+        double prob = 0.0;
+        for (int i = 0; i < nEpochs; i++) {
+
+            INDArray arr = myNetwork.output(testData);
+
+            int length = arr.size(2);
+            INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length-1));
+            double prob1 = probs.getDouble(1);
+            prob = prob1;
+            testData.reset();
         }
 
-        INDArray arr = myNetwork.output(newData);
-        //System.out.println(arr);
-        int length = arr.size(2);
-        INDArray probs = arr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(length - 1));
-        double prob = probs.getDouble(1);
-        //Log.v("sequenceinformation", "Prob = " + prob);
-        System.out.println("Probability: " + prob);
-        return  prob;
+        if (prob < 0.5) {
+            deleteTempFile(fileNumber+1);
+        }
+
+        return prob;
     }
+
+    private static void deleteTempFile(int fileNumber) {
+        String path = "file:" + CSVMaker.outputPath + String.format("train/features/%d.csv", fileNumber);
+        File file = new File(path);
+        file.delete();
+        String path2 = "file:" + CSVMaker.outputPath + String.format("train/labels/%d.csv", fileNumber);
+        File file2 = new File(path2);
+        file2.delete();
+    }
+
 }

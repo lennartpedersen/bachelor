@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.*;
 import android.os.Process;
-import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
@@ -25,13 +24,10 @@ import com.google.android.gms.location.LocationServices;
 import net.anders.autounlock.Export.Export;
 import net.anders.autounlock.MachineLearning.DatabaseRetriever;
 import net.anders.autounlock.MachineLearning.PatternRecognitionService;
-import net.anders.autounlock.MachineLearning.RecogniseSequence;
 import net.anders.autounlock.MachineLearning.RecurrentNN;
-import net.anders.autounlock.MachineLearning.RecurrentNN2;
 import net.anders.autounlock.MachineLearning.WindowProcess;
 import net.anders.autounlock.MachineLearning.WindowData;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -87,7 +83,7 @@ public class CoreService extends Service implements
     public static boolean isTraining = false; // Is app in training mode, stop pattern recog service
     public static boolean isMoving = false; // Are we currently moving
 
-    // For ours what up
+    // Map of unlock sequences
     public static Map<Integer, Double[][]> RNN = new HashMap<>();
 
     // Binder given to clients
@@ -96,7 +92,6 @@ public class CoreService extends Service implements
     static boolean environmentApproved(String foundLock) {
         return Environment.makeDecision(foundLock);
     }
-
 
     // Class used for the client Binder.  Because we know this service always
     // runs in the same process as its clients, we don't need to deal with IPC.
@@ -197,7 +192,7 @@ public class CoreService extends Service implements
             // Get old correct unlocks from DB.
             try {
                 DatabaseRetriever.readOldData();
-                RecurrentNN2.startTraining();
+                RecurrentNN.startTraining();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -654,7 +649,7 @@ public class CoreService extends Service implements
 
         try {
             DatabaseRetriever.readOldData();
-            RecurrentNN2.trainNetwork(snapshot);
+            RecurrentNN.trainNetwork(snapshot);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -664,30 +659,14 @@ public class CoreService extends Service implements
         Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
     }
 
-    public void toooast() {
-        //double d = RecogniseSequence.getProbability();
-        /*String s = "";
-        for (Double[] d : RecogniseSequence.getSequence()) {
-            for (Double dd : d) {
-                s+=dd + " ";
-            }
-        }*/
-        //Toast.makeText(getApplicationContext(), ""+ d, Toast.LENGTH_SHORT).show();
-        NotificationUtility notification = new NotificationUtility();
-        notification.displayUnlockNotification(getApplicationContext());
-    }
-
     public static void accelerometerEvent(SensorData anAccelerometerEvent) {
         windowProcess.insertSensorEventIntoWindow(anAccelerometerEvent);
     }
 
     // Method to export the database
     void exportDB() {
-        //Export.Database();
-        //Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
-        toooast();
-        //NotificationUtility notification = new NotificationUtility();
-        //notification.displayUnlockNotification(getApplicationContext(),1);
+        Export.Database();
+        Toast.makeText(getApplicationContext(), "Database exported", Toast.LENGTH_SHORT).show();
 
     }
 

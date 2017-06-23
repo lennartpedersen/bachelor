@@ -2,18 +2,8 @@ package net.anders.autounlock.MachineLearning;
 
 import android.content.Context;
 import android.util.Log;
-import android.widget.Toast;
 
-import net.anders.autounlock.CoreService;
 import net.anders.autounlock.NotificationUtility;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import be.ac.ulg.montefiore.run.jahmm.ForwardBackwardCalculator;
-import be.ac.ulg.montefiore.run.jahmm.Hmm;
-import be.ac.ulg.montefiore.run.jahmm.ObservationVector;
-import be.ac.ulg.montefiore.run.jahmm.ViterbiCalculator;
 
 /**
  * Created by Anders on 06-03-2017.
@@ -25,14 +15,6 @@ public class RecogniseSequence {
 
     public static Double[][] sequence;
     public static double probability = 0;
-
-    public static Double[][] getSequence() {
-        return sequence;
-    }
-
-    public static double getProbability() {
-        return probability;
-    }
 
     public boolean recognise(Context context, WindowData[] snapshot) {
         // Transform sequential data into a list of vector sequence
@@ -72,11 +54,10 @@ public class RecogniseSequence {
         sequence[2] = accY;
     }
 
-
-    // Evaluation problem - Forward-Backward Calculator
+    // Evaluation
     public static void getProbability(Double[][] sequence){
         try {
-            probability = RecurrentNN2.getProbability(sequence);
+            probability = RecurrentNN.getProbability(sequence);
         } catch (Exception e) {
             e.printStackTrace();
         }

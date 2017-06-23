@@ -7,9 +7,6 @@ import net.anders.autounlock.RingBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by Anders on 21-02-2017.
- */
 
 public class WindowProcess {
 

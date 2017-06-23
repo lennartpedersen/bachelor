@@ -9,9 +9,6 @@ import android.util.Log;
 import net.anders.autounlock.CoreService;
 import net.anders.autounlock.RingBuffer;
 
-/**
- * Created by Anders on 22-02-2017.
- */
 
 public class PatternRecognitionService extends Service {
     private volatile boolean running = true;
@@ -78,8 +75,6 @@ public class PatternRecognitionService extends Service {
                             sendBroadcast(stopRecognise);
                             running = false;
                             stopSelf();
-                        } else {
-                            //CoreService.newTrueNegative();
                         }
 
                         try {

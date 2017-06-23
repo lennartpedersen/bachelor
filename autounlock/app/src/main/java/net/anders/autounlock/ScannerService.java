@@ -44,7 +44,6 @@ public class ScannerService extends Service {
         public void run() {
             CoreService.isScanningForLocks = true;
             List<String> foundLocks = new ArrayList<String>();
-            ArrayList<String> decisionLocks = new ArrayList<String>();
             List<BluetoothData> bluetoothDatas = new ArrayList<>(CoreService.recordedBluetooth);
             while (running) {
                 for (BluetoothData bluetoothData : bluetoothDatas) {
